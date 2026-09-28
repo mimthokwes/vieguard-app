@@ -1,125 +1,88 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'api_endpoints.dart';
-import 'auth_session.dart';
+import 'package:dio/dio.dart';
 
-class ApiResponse<T> {
-  final bool success;
-  final String message;
-  final T? data;
-
-  ApiResponse({
-    required this.success,
-    required this.message,
-    this.data,
-  });
-}
+import '../storage/token_storage.dart';
+import 'api_config.dart';
+import 'api_exception.dart';
 
 class ApiClient {
-  static final http.Client _client = http.Client();
+  final TokenStorage tokenStorage;
+  final Dio _dio;
+  void Function()? onSessionExpired;
 
-  static Future<ApiResponse<dynamic>> get(String path, {Map<String, String>? queryParams}) async {
+  ApiClient({required this.tokenStorage})
+      : _dio = Dio(BaseOptions(
+          baseUrl: ApiConfig.baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        )) {
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await tokenStorage.readAccessToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+      onError: (error, handler) async {
+        final isUnauthorized = error.response?.statusCode == 401;
+        final isRefreshCall = error.requestOptions.path.contains('/auth/refresh');
+        if (isUnauthorized && !isRefreshCall) {
+          final refreshed = await _tryRefreshToken();
+          if (refreshed != null) {
+            final retryOptions = error.requestOptions;
+            retryOptions.headers['Authorization'] = 'Bearer $refreshed';
+            try {
+              final response = await _dio.fetch(retryOptions);
+              return handler.resolve(response);
+            } catch (_) {
+              // fall through to session expiry below
+            }
+          }
+          await tokenStorage.clear();
+          onSessionExpired?.call();
+        }
+        handler.next(error);
+      },
+    ));
+  }
+
+  Future<String?> _tryRefreshToken() async {
+    final refreshToken = await tokenStorage.readRefreshToken();
+    if (refreshToken == null) return null;
     try {
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$path').replace(queryParameters: queryParams);
-      final response = await _client
-          .get(uri, headers: AuthSession.authHeaders)
-          .timeout(const Duration(seconds: 5));
-
-      final jsonMap = jsonDecode(response.body);
-      return ApiResponse<dynamic>(
-        success: jsonMap['success'] ?? (response.statusCode >= 200 && response.statusCode < 300),
-        message: jsonMap['message'] ?? 'Berhasil mengambil data',
-        data: jsonMap['data'],
-      );
-    } catch (e) {
-      return ApiResponse<dynamic>(
-        success: false,
-        message: 'Koneksi backend: $e',
-      );
+      final response = await _dio.post('/auth/refresh', data: {'refreshToken': refreshToken});
+      final newAccess = response.data['data']['accessToken'] as String;
+      await tokenStorage.updateAccessToken(newAccess);
+      return newAccess;
+    } catch (_) {
+      return null;
     }
   }
 
-  static Future<ApiResponse<dynamic>> post(String path, Map<String, dynamic> body) async {
-    try {
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$path');
-      final response = await _client
-          .post(uri, headers: AuthSession.authHeaders, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 5));
+  Future<dynamic> get(String path, {Map<String, dynamic>? query}) => _unwrap(_dio.get(path, queryParameters: query));
 
-      final jsonMap = jsonDecode(response.body);
-      return ApiResponse<dynamic>(
-        success: jsonMap['success'] ?? (response.statusCode >= 200 && response.statusCode < 300),
-        message: jsonMap['message'] ?? 'Berhasil memproses data',
-        data: jsonMap['data'],
-      );
-    } catch (e) {
-      return ApiResponse<dynamic>(
-        success: false,
-        message: 'Koneksi backend: $e',
-      );
+  Future<dynamic> post(String path, {Map<String, dynamic>? data}) => _unwrap(_dio.post(path, data: data));
+
+  Future<dynamic> patch(String path, {Map<String, dynamic>? data}) => _unwrap(_dio.patch(path, data: data));
+
+  Future<dynamic> put(String path, {Map<String, dynamic>? data}) => _unwrap(_dio.put(path, data: data));
+
+  Future<List<int>> downloadBytes(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes));
+      return response.data ?? [];
+    } on DioException catch (e) {
+      throw ApiException(e.message ?? 'Gagal mengunduh berkas', statusCode: e.response?.statusCode);
     }
   }
 
-  static Future<ApiResponse<dynamic>> patch(String path, Map<String, dynamic> body) async {
+  Future<dynamic> _unwrap(Future<Response> request) async {
     try {
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$path');
-      final response = await _client
-          .patch(uri, headers: AuthSession.authHeaders, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 5));
-
-      final jsonMap = jsonDecode(response.body);
-      return ApiResponse<dynamic>(
-        success: jsonMap['success'] ?? (response.statusCode >= 200 && response.statusCode < 300),
-        message: jsonMap['message'] ?? 'Berhasil memperbarui data',
-        data: jsonMap['data'],
-      );
-    } catch (e) {
-      return ApiResponse<dynamic>(
-        success: false,
-        message: 'Koneksi backend: $e',
-      );
-    }
-  }
-
-  static Future<ApiResponse<dynamic>> put(String path, Map<String, dynamic> body) async {
-    try {
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$path');
-      final response = await _client
-          .put(uri, headers: AuthSession.authHeaders, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 5));
-
-      final jsonMap = jsonDecode(response.body);
-      return ApiResponse<dynamic>(
-        success: jsonMap['success'] ?? (response.statusCode >= 200 && response.statusCode < 300),
-        message: jsonMap['message'] ?? 'Berhasil memperbarui data',
-        data: jsonMap['data'],
-      );
-    } catch (e) {
-      return ApiResponse<dynamic>(
-        success: false,
-        message: 'Koneksi backend: $e',
-      );
-    }
-  }
-
-  static Future<ApiResponse<dynamic>> delete(String path) async {
-    try {
-      final uri = Uri.parse('${ApiEndpoints.baseUrl}$path');
-      final response = await _client
-          .delete(uri, headers: AuthSession.authHeaders)
-          .timeout(const Duration(seconds: 5));
-
-      final jsonMap = jsonDecode(response.body);
-      return ApiResponse<dynamic>(
-        success: jsonMap['success'] ?? (response.statusCode >= 200 && response.statusCode < 300),
-        message: jsonMap['message'] ?? 'Berhasil menghapus data',
-        data: jsonMap['data'],
-      );
-    } catch (e) {
-      return ApiResponse<dynamic>(
-        success: false,
-        message: 'Koneksi backend: $e',
-      );
+      final response = await request;
+      return response.data['data'];
+    } on DioException catch (e) {
+      final message = e.response?.data is Map ? (e.response?.data['message'] as String?) : null;
+      throw ApiException(message ?? e.message ?? 'Terjadi kesalahan jaringan', statusCode: e.response?.statusCode);
     }
   }
 }
