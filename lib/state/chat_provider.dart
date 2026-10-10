@@ -6,6 +6,7 @@ import '../core/api/api_config.dart';
 import '../core/api/api_exception.dart';
 import '../core/storage/token_storage.dart';
 import '../models/conversation_model.dart';
+import '../models/operations_models.dart';
 import '../models/message_model.dart';
 
 class ChatProvider extends ChangeNotifier {
@@ -49,6 +50,19 @@ class ChatProvider extends ChangeNotifier {
     try {
       final data = await apiClient.get('/chat/conversations/$conversationId/messages');
       _messages = (data as List<dynamic>).map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
+      final index = _conversations.indexWhere((c) => c.id == conversationId);
+      if (index != -1) {
+        final old = _conversations[index];
+        _conversations[index] = Conversation(
+          id: old.id,
+          customerId: old.customerId,
+          customerName: old.customerName,
+          customerPhoto: old.customerPhoto,
+          lastMessageText: old.lastMessageText,
+          lastMessageAt: old.lastMessageAt,
+          lastFromAdmin: old.lastFromAdmin,
+        );
+      }
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {
@@ -57,6 +71,13 @@ class ChatProvider extends ChangeNotifier {
     }
     await _ensureSocketConnected();
     _socket?.emit('conversation:join', conversationId);
+  }
+
+  Future<void> connectRealtime() => _ensureSocketConnected();
+
+  void disconnectRealtime() {
+    _socket?.dispose();
+    _socket = null;
   }
 
   Future<void> _ensureSocketConnected() async {
@@ -74,28 +95,48 @@ class ChatProvider extends ChangeNotifier {
           .build(),
     );
 
+    _socket!.onConnect((_) {
+      final active = _activeConversationId;
+      if (active != null) _socket?.emit('conversation:join', active);
+    });
+
     _socket!.onConnectError((_) {
       errorMessage = 'Gagal terhubung ke server chat real-time.';
       notifyListeners();
+      _socket?.dispose();
+      _socket = null;
+      Future.delayed(const Duration(seconds: 10), () async {
+        if (_socket != null || await tokenStorage.readAccessToken() == null) return;
+        await fetchConversations();
+        await _ensureSocketConnected();
+      });
     });
 
     _socket!.on('message:new', (data) {
       final message = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
-      if (message.conversationId == _activeConversationId) {
+      if (message.conversationId == _activeConversationId && !_messages.any((m) => m.id == message.id)) {
         _messages.add(message);
+        if (!message.isFromAdmin) apiClient.get('/chat/conversations/${message.conversationId}/messages').ignore();
       }
       final convIndex = _conversations.indexWhere((c) => c.id == message.conversationId);
-      if (convIndex != -1) {
-        final old = _conversations[convIndex];
-        _conversations[convIndex] = Conversation(
+      if (convIndex == -1) {
+        fetchConversations();
+        return;
+      }
+      final old = _conversations.removeAt(convIndex);
+      _conversations.insert(
+        0,
+        Conversation(
           id: old.id,
           customerId: old.customerId,
           customerName: old.customerName,
           customerPhoto: old.customerPhoto,
           lastMessageText: message.messageText,
           lastMessageAt: message.createdAt,
-        );
-      }
+          unreadCount: message.isFromAdmin || message.conversationId == _activeConversationId ? old.unreadCount : old.unreadCount + 1,
+          lastFromAdmin: message.isFromAdmin,
+        ),
+      );
       notifyListeners();
     });
 
@@ -120,5 +161,31 @@ class ChatProvider extends ChangeNotifier {
   void dispose() {
     _socket?.dispose();
     super.dispose();
+  }
+
+  List<CustomerSummary> customers = [];
+
+  Future<void> fetchCustomers() async {
+    try {
+      final data = await apiClient.get('/customers');
+      customers = (data as List<dynamic>).map((e) => CustomerSummary.fromJson(e as Map<String, dynamic>)).toList();
+      notifyListeners();
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      notifyListeners();
+    }
+  }
+
+  Future<Conversation?> startConversation(String userId, String message) async {
+    try {
+      await apiClient.post('/chat/conversations', data: {'userId': userId, 'messageText': message});
+      await fetchConversations();
+      final matches = _conversations.where((c) => c.customerId == userId);
+      return matches.isEmpty ? null : matches.first;
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      notifyListeners();
+      return null;
+    }
   }
 }
