@@ -9,6 +9,7 @@ import '../beranda/beranda_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../penyewaan/penyewaan_list_screen.dart';
 import '../pesanan/pesanan_list_screen.dart';
+// import '../laporan/laporan_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -43,14 +44,16 @@ class _MainShellState extends State<MainShell> {
     PenyewaanListScreen(),
     ChatListScreen(),
     AkunScreen(),
+    // LaporanScreen(),
   ];
 
   static const _items = [
     (Icons.window_outlined, 'Beranda'),
-    (Icons.receipt_long_rounded, 'Pesanan'),
-    (Icons.vpn_key_outlined, 'Penyewaan'),
+    (Icons.receipt_long_rounded, 'Beli'),
+    (Icons.vpn_key_outlined, 'Sewa'),
     (Icons.chat_bubble_outline_rounded, 'Chat'),
     (Icons.person_outline_rounded, 'Akun'),
+    // (Icons.window_outlined,'Laporan')
   ];
 
   @override

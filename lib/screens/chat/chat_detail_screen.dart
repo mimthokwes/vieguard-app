@@ -256,7 +256,7 @@ class _DateSeparator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
         child: VgPill(
-          label: DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date),
+          label: Formatters.dayDate(date),
           color: AppColors.primary,
           background: AppColors.beige,
           icon: Icons.calendar_today_rounded,
@@ -278,7 +278,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final admin = message.isFromAdmin;
-    final time = '${DateFormat('HH:mm').format(message.createdAt)} WIB';
+    final time = Formatters.timeWithZone(message.createdAt);
     final image = resolveMediaUrl(message.imageAttachment, ApiConfig.origin);
     final maxWidth = MediaQuery.of(context).size.width * 0.74;
 
