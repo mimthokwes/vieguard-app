@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/chat_provider.dart';
 import '../../widgets/common/tap_scale.dart';
-import '../akun/akun_screen.dart';
+import '../laporan/laporan_screen.dart';
 import '../beranda/beranda_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../penyewaan/penyewaan_list_screen.dart';
@@ -43,17 +43,17 @@ class _MainShellState extends State<MainShell> {
     PesananListScreen(),
     PenyewaanListScreen(),
     ChatListScreen(),
-    AkunScreen(),
-    // LaporanScreen(),
+    LaporanScreen(),
+    // AkunScreen(),
   ];
 
   static const _items = [
     (Icons.window_outlined, 'Beranda'),
     (Icons.receipt_long_rounded, 'Beli'),
-    (Icons.vpn_key_outlined, 'Sewa'),
+    (Icons.handshake_outlined, 'Sewa'),
     (Icons.chat_bubble_outline_rounded, 'Chat'),
-    (Icons.person_outline_rounded, 'Akun'),
-    // (Icons.window_outlined,'Laporan')
+    (Icons.trending_up_rounded, 'Laporan'),
+    // (Icons.window_outlined,'Akun')
   ];
 
   @override

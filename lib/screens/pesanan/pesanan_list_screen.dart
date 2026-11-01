@@ -137,7 +137,7 @@ class _PesananListScreenState extends State<PesananListScreen> {
               automaticallyImplyLeading: false,
               titleSpacing: 16,
               leading: Navigator.canPop(context) ? const BackButton(color: AppColors.primary) : null,
-              title: const VgTopBar(subtitle: 'Pesanan'),
+              title: const VgTopBar(subtitle: 'Pembelian'),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),

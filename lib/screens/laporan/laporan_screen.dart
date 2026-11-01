@@ -118,132 +118,146 @@ class _LaporanScreenState extends State<LaporanScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const VgBackBar(title: 'Laporan & Analitik'),
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: report.fetchSummary,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-          children: [
-            Row(children: [
-              Expanded(
-                child: PopupMenuButton<_Period>(
-                  color: AppColors.surface,
-                  onSelected: _selectPeriod,
-                  itemBuilder: (_) => [
-                    for (final p in _Period.values) PopupMenuItem(value: p, child: Text(p == _Period.custom ? 'Pilih Rentang Tanggal…' : _periodLabel(p, report))),
-                  ],
-                  child: Container(
-                    height: 46,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border), boxShadow: AppColors.cardShadow),
-                    child: Row(children: [
-                      const Icon(Icons.calendar_month_outlined, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(_periodLabel(_period, report), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
-                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
-                    ]),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              TapScale(
-                onTap: summary == null ? null : () => _copySummary(context, report, summary, topItems.map((e) => e.key).take(3).toList()),
-                child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(12)),
-                  child: const Row(children: [
-                    Icon(Icons.copy_all_rounded, size: 18, color: AppColors.primary),
-                    SizedBox(width: 6),
-                    Text('Salin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                  ]),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            if (report.isLoading && summary == null)
-              const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: Center(child: CircularProgressIndicator()))
-            else if (summary == null)
-              VgCard(child: Text(report.errorMessage ?? 'Belum ada data laporan.', style: const TextStyle(color: AppColors.textSecondary)))
-            else ...[
-              _CompletionBanner(summary: summary),
-              const SizedBox(height: 12),
-              _KpiGrid(summary: summary, previous: previous, utilization: utilization, rentedNow: rentedNow, totalStock: totalStock),
-              const SizedBox(height: 14),
-              _RevenueComposition(summary: summary, typeName: _typeName),
-              VgCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Katalog Terlaris', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                  const SizedBox(height: 4),
-                  const Text('Berdasarkan nilai pesanan pada periode ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  const SizedBox(height: 12),
-                  if (topItems.isEmpty)
-                    const Text('Belum ada pesanan pada periode ini.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))
-                  else
-                    for (var i = 0; i < topItems.length && i < 3; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: VgInset(
-                          padding: const EdgeInsets.all(10),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              toolbarHeight: 68,
+              backgroundColor: AppColors.background,
+              surfaceTintColor: Colors.transparent,
+              automaticallyImplyLeading: false,
+              titleSpacing: 16,
+              title: const VgTopBar(subtitle: 'Laporan & Analitik'),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  Row(children: [
+                    Expanded(
+                      child: PopupMenuButton<_Period>(
+                        color: AppColors.surface,
+                        onSelected: _selectPeriod,
+                        itemBuilder: (_) => [
+                          for (final p in _Period.values) PopupMenuItem(value: p, child: Text(p == _Period.custom ? 'Pilih Rentang Tanggal…' : _periodLabel(p, report))),
+                        ],
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border), boxShadow: AppColors.cardShadow),
                           child: Row(children: [
-                            VgThumb(url: topItems[i].value.$3, size: 46, radius: 8),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(topItems[i].key, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                                Text('${topItems[i].value.$2}x dipesan', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
-                              ]),
-                            ),
+                            const Icon(Icons.calendar_month_outlined, size: 18, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                              Text(Formatters.rupiahCompact(topItems[i].value.$1), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.primary)),
-                              if (i == 0) const Text('Top Revenue #1', style: TextStyle(fontSize: 11.5, color: AppColors.success)),
-                            ]),
+                            Expanded(child: Text(_periodLabel(_period, report), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
                           ]),
                         ),
                       ),
-                ]),
-              ),
-              VgCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Icon(Icons.speed_rounded, color: AppColors.primary, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Efisiensi Operasional', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                    ),
+                    const SizedBox(width: 10),
+                    TapScale(
+                      onTap: summary == null ? null : () => _copySummary(context, report, summary, topItems.map((e) => e.key).take(3).toList()),
+                      child: Container(
+                        height: 46,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(12)),
+                        child: const Row(children: [
+                          Icon(Icons.copy_all_rounded, size: 18, color: AppColors.primary),
+                          SizedBox(width: 6),
+                          Text('Salin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        ]),
+                      ),
+                    ),
                   ]),
                   const SizedBox(height: 12),
-                  _Efficiency(
-                    icon: Icons.task_alt_rounded,
-                    label: 'Pesanan Selesai',
-                    value: summary.totalOrders == 0 ? '-' : '${(summary.completedOrders * 100 / summary.totalOrders).round()}% (${summary.completedOrders}/${summary.totalOrders})',
-                    badge: summary.pendingOrders > 0 ? '${summary.pendingOrders} Pending' : 'Tidak Ada Antrean',
-                    good: summary.pendingOrders == 0,
-                  ),
-                  _Efficiency(
-                    icon: Icons.bolt_rounded,
-                    label: 'Rata-rata Verifikasi Pembayaran',
-                    value: avgVerify == null ? 'Belum ada data' : _duration(avgVerify),
-                    badge: avgVerify == null ? '-' : (avgVerify.inHours < 24 ? 'Cepat' : 'Perlu Dipercepat'),
-                    good: avgVerify != null && avgVerify.inHours < 24,
-                  ),
-                  _Efficiency(
-                    icon: Icons.history_rounded,
-                    label: 'Pengembalian Sewa Tepat Waktu',
-                    value: onTimeRate == null ? 'Belum ada data' : '${(onTimeRate * 100).toStringAsFixed(1)}% ($onTime/${returned.length})',
-                    badge: onTimeRate == null ? '-' : (onTimeRate >= 0.9 ? 'Disiplin Tinggi' : 'Perlu Pengingat'),
-                    good: onTimeRate != null && onTimeRate >= 0.9,
-                  ),
+                  if (report.isLoading && summary == null)
+                    const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: Center(child: CircularProgressIndicator()))
+                  else if (summary == null)
+                    VgCard(child: Text(report.errorMessage ?? 'Belum ada data laporan.', style: const TextStyle(color: AppColors.textSecondary)))
+                  else ...[
+                    _CompletionBanner(summary: summary),
+                    const SizedBox(height: 12),
+                    _KpiGrid(summary: summary, previous: previous, utilization: utilization, rentedNow: rentedNow, totalStock: totalStock),
+                    const SizedBox(height: 14),
+                    _RevenueComposition(summary: summary, typeName: _typeName),
+                    VgCard(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text('Katalog Terlaris', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                        const SizedBox(height: 4),
+                        const Text('Berdasarkan nilai pesanan pada periode ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        const SizedBox(height: 12),
+                        if (topItems.isEmpty)
+                          const Text('Belum ada pesanan pada periode ini.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))
+                        else
+                          for (var i = 0; i < topItems.length && i < 3; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: VgInset(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(children: [
+                                  VgThumb(url: topItems[i].value.$3, size: 46, radius: 8),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(topItems[i].key, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                                      Text('${topItems[i].value.$2}x dipesan', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
+                                    ]),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                    Text(Formatters.rupiahCompact(topItems[i].value.$1), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                    if (i == 0) const Text('Top Revenue #1', style: TextStyle(fontSize: 11.5, color: AppColors.success)),
+                                  ]),
+                                ]),
+                              ),
+                            ),
+                      ]),
+                    ),
+                    VgCard(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Row(children: [
+                          Icon(Icons.speed_rounded, color: AppColors.primary, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('Efisiensi Operasional', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                        ]),
+                        const SizedBox(height: 12),
+                        _Efficiency(
+                          icon: Icons.task_alt_rounded,
+                          label: 'Pesanan Selesai',
+                          value: summary.totalOrders == 0 ? '-' : '${(summary.completedOrders * 100 / summary.totalOrders).round()}% (${summary.completedOrders}/${summary.totalOrders})',
+                          badge: summary.pendingOrders > 0 ? '${summary.pendingOrders} Pending' : 'Tidak Ada Antrean',
+                          good: summary.pendingOrders == 0,
+                        ),
+                        _Efficiency(
+                          icon: Icons.bolt_rounded,
+                          label: 'Rata-rata Verifikasi Pembayaran',
+                          value: avgVerify == null ? 'Belum ada data' : _duration(avgVerify),
+                          badge: avgVerify == null ? '-' : (avgVerify.inHours < 24 ? 'Cepat' : 'Perlu Dipercepat'),
+                          good: avgVerify != null && avgVerify.inHours < 24,
+                        ),
+                        _Efficiency(
+                          icon: Icons.history_rounded,
+                          label: 'Pengembalian Sewa Tepat Waktu',
+                          value: onTimeRate == null ? 'Belum ada data' : '${(onTimeRate * 100).toStringAsFixed(1)}% ($onTime/${returned.length})',
+                          badge: onTimeRate == null ? '-' : (onTimeRate >= 0.9 ? 'Disiplin Tinggi' : 'Perlu Pengingat'),
+                          good: onTimeRate != null && onTimeRate >= 0.9,
+                        ),
+                      ]),
+                    ),
+                    VgButton(
+                      label: 'Salin Ringkasan Laporan',
+                      icon: Icons.forward_to_inbox_outlined,
+                      expanded: true,
+                      height: 52,
+                      onPressed: () => _copySummary(context, report, summary, topItems.map((e) => e.key).take(3).toList()),
+                    ),
+                  ],
                 ]),
               ),
-              VgButton(
-                label: 'Salin Ringkasan Laporan',
-                icon: Icons.forward_to_inbox_outlined,
-                expanded: true,
-                height: 52,
-                onPressed: () => _copySummary(context, report, summary, topItems.map((e) => e.key).take(3).toList()),
-              ),
-            ],
+            ),
           ],
         ),
       ),

@@ -17,8 +17,9 @@ import '../../widgets/vg/vg_ui.dart';
 import '../penyewaan/penyewaan_list_screen.dart';
 import '../pesanan/detail_pesanan_screen.dart';
 import '../pesanan/pesanan_list_screen.dart';
-import '../stok/product_form_screen.dart';
 import '../stok/stok_list_screen.dart';
+import '../tambah/add_purchase_screen.dart';
+import '../tambah/add_rental_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
@@ -128,14 +129,26 @@ class _BerandaScreenState extends State<BerandaScreen> {
                         onTap: () => _push(const PenyewaanListScreen()),
                       ),
                     ),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                      child: _KelolaTile(
+                        icon: Icons.shopping_bag_outlined,
+                        title: 'Tambah Beli',
+                        subtitle: 'Barang Pembelian',
+                        highlighted: true,
+                        onTap: () => _push(const AddPurchaseItemScreen()),
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _KelolaTile(
-                        icon: Icons.add_circle_outline_rounded,
-                        title: 'Tambah Barang',
-                        subtitle: 'Baru / Custom',
+                        icon: Icons.handshake_outlined,
+                        title: 'Tambah Sewa',
+                        subtitle: 'Kostum / Sewaan',
                         highlighted: true,
-                        onTap: () => _push(const ProductFormScreen()),
+                        onTap: () => _push(const AddRentalItemScreen()),
                       ),
                     ),
                   ]),
