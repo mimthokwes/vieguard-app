@@ -137,22 +137,22 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             child: AnimatedBuilder(
               animation: _auraController,
               builder: (context, child) {
-                final scale = 0.9 + 0.2 * _auraController.value;
-                final opacity = 0.25 + 0.25 * _auraController.value;
+                final scale = 0.95 + 0.2 * _auraController.value;
+                final opacity = 0.3 + 0.25 * _auraController.value;
                 return Transform.scale(
                   scale: scale,
                   child: Container(
-                    width: 220,
-                    height: 220,
+                    width: 250,
+                    height: 250,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
                           AuthColors.goldLight.withValues(alpha: opacity),
-                          AuthColors.maroonMid.withValues(alpha: opacity * 0.4),
+                          AuthColors.maroonMid.withValues(alpha: opacity * 0.35),
                           Colors.transparent,
                         ],
-                        stops: const [0.0, 0.5, 1.0],
+                        stops: const [0.0, 0.45, 1.0],
                       ),
                     ),
                   ),
@@ -169,35 +169,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Animated Logo
+                    // Animated Logo (Clean Floating, No Box Border)
                     Opacity(
                       opacity: _logoOpacity.value.clamp(0.0, 1.0),
                       child: Transform.scale(
                         scale: _logoScale.value,
-                        child: Container(
-                          width: 88,
-                          height: 88,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: AuthColors.goldLight.withValues(alpha: 0.5),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AuthColors.gold.withValues(alpha: 0.3),
-                                blurRadius: 28,
-                                spreadRadius: 2,
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.45),
-                                blurRadius: 18,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
+                        child: SizedBox(
+                          width: 104,
+                          height: 104,
                           child: Image.asset(
                             'assets/images/logo.png',
                             fit: BoxFit.contain,
@@ -207,7 +186,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                               errorBuilder: (context, error, stackTrace) => const Icon(
                                 Icons.shield_rounded,
                                 color: AuthColors.goldLight,
-                                size: 48,
+                                size: 64,
                               ),
                             ),
                           ),
@@ -215,7 +194,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
 
                     // Brand Title
                     Opacity(
@@ -233,7 +212,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           child: Text(
                             'VIEGUARD',
                             style: GoogleFonts.cinzel(
-                              fontSize: 27,
+                              fontSize: 28,
                               fontWeight: FontWeight.w800,
                               letterSpacing: _letterSpacing.value,
                               color: Colors.white,
@@ -245,18 +224,18 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                     const SizedBox(height: 6),
 
-                    // Subtitle
+                    // Subtitle (Admin Focused)
                     Opacity(
                       opacity: _subOpacity.value.clamp(0.0, 1.0),
                       child: SlideTransition(
                         position: _subSlide,
                         child: Text(
-                          'Costume Rental & Garment',
+                          'Admin Operations Workspace',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
                             color: AuthColors.goldLight.withValues(alpha: 0.85),
-                            letterSpacing: 0.8,
+                            letterSpacing: 1.2,
                           ),
                         ),
                       ),
