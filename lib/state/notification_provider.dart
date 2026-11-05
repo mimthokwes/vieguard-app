@@ -35,6 +35,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> fetchNotifications({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
     if (!force && isFresh && _notifications.isNotEmpty) {
       return;
     }

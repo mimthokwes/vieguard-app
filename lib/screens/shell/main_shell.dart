@@ -20,6 +20,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  final Set<int> _loadedIndices = {0};
   late final ChatProvider _chat;
 
   @override
@@ -61,7 +62,13 @@ class _MainShellState extends State<MainShell> {
     final unreadChats = context.watch<ChatProvider>().conversations.fold<int>(0, (s, c) => s + c.unreadCount);
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(
+        index: _index,
+        children: List.generate(
+          _screens.length,
+          (i) => _loadedIndices.contains(i) ? _screens[i] : const SizedBox.shrink(),
+        ),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Container(
@@ -79,7 +86,10 @@ class _MainShellState extends State<MainShell> {
               final (icon, label) = _items[i];
               return Expanded(
                 child: TapScale(
-                  onTap: () => setState(() => _index = i),
+                  onTap: () => setState(() {
+                    _index = i;
+                    _loadedIndices.add(i);
+                  }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,

@@ -94,7 +94,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     kostumDisewa: rentedUnits,
                     modelDisewa: activeModels,
                     progres: orders.progresProduksiRata,
-                    omset: orders.omsetTotal,
+                    pesananProduksi: orders.activeProductionCount,
+                    omset: orders.omsetBulanIni,
                     onPesanan: () => _push(const PesananListScreen()),
                     onSewa: () => _push(const PenyewaanListScreen()),
                   ),
@@ -112,7 +113,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _KelolaTile(
-                        icon: Icons.event_available_rounded,
+                        icon: Icons.assignment_outlined,
                         title: 'Kelola Sewaan',
                         subtitle: '$bookedRentals Aktif',
                         onTap: () => _push(const PenyewaanListScreen()),
@@ -123,8 +124,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   Row(children: [
                     Expanded(
                       child: _KelolaTile(
-                        icon: Icons.shopping_bag_outlined,
-                        title: 'Tambah Beli',
+                        icon: Icons.add_rounded,
+                        title: 'Tambah',
                         subtitle: 'Barang Pembelian',
                         highlighted: true,
                         onTap: () => _push(const AddPurchaseItemScreen()),
@@ -133,9 +134,9 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _KelolaTile(
-                        icon: Icons.handshake_outlined,
-                        title: 'Tambah Sewa',
-                        subtitle: 'Kostum / Sewaan',
+                        icon: Icons.add_rounded,
+                        title: 'Tambah',
+                        subtitle: 'Barang Sewaan',
                         highlighted: true,
                         onTap: () => _push(const AddRentalItemScreen()),
                       ),
@@ -149,9 +150,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     onAction: () => _push(const PenyewaanListScreen()),
                   ),
                   if (schedule.isEmpty)
-                    const VgCard(
-                      padding: EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-                      child: Text('Tidak ada jadwal pengambilan atau pengembalian hari ini.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                    VgEmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'Semua Jadwal Aman Hari Ini',
+                      message: 'Belum ada jadwal pengambilan atau pengembalian kostum hari ini. Jadwal berikutnya akan otomatis dimunculkan di sini.',
+                      actionLabel: 'Buka Kalender Sewa',
+                      onAction: () => _push(const PenyewaanListScreen(initialTab: 1)),
                     )
                   else
                     ...schedule.map((o) => _JadwalTile(order: o, today: today)),
@@ -175,7 +179,11 @@ class _BerandaScreenState extends State<BerandaScreen> {
                       ]),
                     )
                   else if (orders.orders.isEmpty)
-                    const VgCard(child: Text('Belum ada pesanan.', style: TextStyle(color: AppColors.textSecondary)))
+                    const VgEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Belum Ada Pesanan',
+                      message: 'Pesanan pembelian dan sewa yang baru masuk akan langsung tercatat dan dapat dipantau di sini.',
+                    )
                   else
                     ...orders.pesananTerbaru.map((o) => _RecentOrderCard(order: o, onTap: () => _push(DetailPesananScreen(orderId: o.id)))),
                 ]),
@@ -230,7 +238,7 @@ class _WelcomeBanner extends StatelessWidget {
             const SizedBox(height: 12),
             Text('Selamat Datang, $adminName', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.goldLight, height: 1.25)),
             const SizedBox(height: 6),
-            const Text('Pantau konveksi seragam & rental kostum hari ini.', style: TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted, height: 1.4)),
+            const Text('Pantau pesanan pembelian & rental kostum hari ini.', style: TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted, height: 1.4)),
           ]),
         ),
       ]),
@@ -243,6 +251,7 @@ class _Ringkasan extends StatelessWidget {
   final int kostumDisewa;
   final int modelDisewa;
   final double progres;
+  final int pesananProduksi;
   final double omset;
   final VoidCallback onPesanan;
   final VoidCallback onSewa;
@@ -252,6 +261,7 @@ class _Ringkasan extends StatelessWidget {
     required this.kostumDisewa,
     required this.modelDisewa,
     required this.progres,
+    required this.pesananProduksi,
     required this.omset,
     required this.onPesanan,
     required this.onSewa,
@@ -301,14 +311,14 @@ class _Ringkasan extends StatelessWidget {
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Kostum Disewa', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      const Text('Kostum di Luar (Disewa)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 2),
                       Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                         Text('$kostumDisewa', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.primary)),
                         const SizedBox(width: 6),
                         Container(width: 5, height: 5, decoration: const BoxDecoration(color: AppColors.info, shape: BoxShape.circle)),
                         const SizedBox(width: 4),
-                        Flexible(child: Text('$modelDisewa Model saat ini', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary))),
+                        Flexible(child: Text('$modelDisewa Model aktif', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary))),
                       ]),
                     ]),
                   ),
@@ -318,17 +328,22 @@ class _Ringkasan extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: _box,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   const Expanded(child: Text('Progres Produksi', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
                   Text('$percent%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
                 ]),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(value: progres.clamp(0, 1), minHeight: 7, backgroundColor: AppColors.beige, color: AppColors.gold),
+                  child: LinearProgressIndicator(value: progres.clamp(0, 1), minHeight: 6, backgroundColor: AppColors.beige, color: AppColors.gold),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  pesananProduksi > 0 ? '$pesananProduksi pesanan disiapkan' : 'Semua pesanan selesai',
+                  style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
                 ),
               ]),
             ),
@@ -338,7 +353,7 @@ class _Ringkasan extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: _box,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Omset Berjalan', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                const Text('Omset Bulan Ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 2),
                 Text(Formatters.rupiahCompact(omset), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
               ]),

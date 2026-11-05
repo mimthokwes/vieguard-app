@@ -18,7 +18,7 @@ import '../../widgets/vg/vg_ui.dart';
 import '../akun/akun_screen.dart';
 import 'chat_detail_screen.dart';
 
-enum _ChatFilter { semua, belumDibaca, konveksi, sewa, perluRespon }
+enum _ChatFilter { semua, belumDibaca, pembelian, sewa, perluRespon }
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -62,7 +62,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   bool _matches(Conversation c, Order? o, _ChatFilter f) => switch (f) {
         _ChatFilter.semua => true,
         _ChatFilter.belumDibaca => c.unreadCount > 0,
-        _ChatFilter.konveksi => o != null && o.orderType != OrderType.sewa,
+        _ChatFilter.pembelian => o != null && o.orderType != OrderType.sewa,
         _ChatFilter.sewa => o?.orderType == OrderType.sewa,
         _ChatFilter.perluRespon => _needsResponse(o),
       };
@@ -70,7 +70,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String _label(_ChatFilter f) => switch (f) {
         _ChatFilter.semua => 'Semua Obrolan',
         _ChatFilter.belumDibaca => 'Belum Dibaca',
-        _ChatFilter.konveksi => 'Konveksi',
+        _ChatFilter.pembelian => 'Pembelian',
         _ChatFilter.sewa => 'Sewa',
         _ChatFilter.perluRespon => 'Perlu Respon',
       };
@@ -116,7 +116,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ]),
                 ),
                 IconButton(icon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 26), onPressed: _searchFocus.requestFocus),
-                TapScale(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AkunScreen())), child: VgAvatar(name: admin?.name ?? 'Admin')),
+                TapScale(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AkunScreen())), child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto)),
               ]),
               const SizedBox(height: 14),
               Row(children: [
@@ -212,7 +212,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
               else if (chat.errorMessage != null && chat.conversations.isEmpty)
                 VgCard(child: Text(chat.errorMessage!, style: const TextStyle(color: AppColors.danger)))
               else if (visible.isEmpty)
-                const VgCard(child: Text('Belum ada percakapan pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+                VgEmptyState(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: _query.isNotEmpty ? 'Percakapan Tidak Ditemukan' : 'Belum Ada Pesan Masuk',
+                  message: _query.isNotEmpty
+                      ? 'Tidak ada riwayat chat yang cocok dengan "$_query". Coba cari nama atau nomor pesanan lain.'
+                      : 'Pesan, konsultasi ukuran, dan pertanyaan pelanggan akan langsung tampil di sini.',
+                  actionLabel: (_query.isNotEmpty || _filter != _ChatFilter.semua) ? 'Reset Filter' : null,
+                  onAction: () => setState(() {
+                    _query = '';
+                    _filter = _ChatFilter.semua;
+                  }),
+                )
               else
                 for (final (c, o) in visible)
                   _ConversationCard(

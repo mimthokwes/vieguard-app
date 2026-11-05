@@ -182,7 +182,18 @@ class _StokListScreenState extends State<StokListScreen> {
           if (provider.isLoading && all.isEmpty)
             const VgSkeletonList(count: 3, item: VgOrderCardSkeleton())
           else if (list.isEmpty)
-            const VgCard(child: Text('Belum ada produk pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+            VgEmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: _query.isNotEmpty ? 'Produk Tidak Ditemukan' : 'Belum Ada Item Stok',
+              message: _query.isNotEmpty
+                  ? 'Tidak ada produk atau aksesoris yang cocok dengan "$_query".'
+                  : 'Item pakaian, kostum sewa, dan aksesoris yang didaftarkan akan tampil di sini.',
+              actionLabel: (_query.isNotEmpty || _categoryId != null) ? 'Reset Filter' : null,
+              onAction: () => setState(() {
+                _query = '';
+                _categoryId = null;
+              }),
+            )
           else
             ...list.map((p) => _ProductCard(product: p)),
           Row(children: [

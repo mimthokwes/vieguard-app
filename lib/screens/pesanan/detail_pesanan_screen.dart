@@ -369,7 +369,7 @@ class _StandardSpecCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20)),
-              child: Text(order.orderType == OrderType.sewa ? 'Rental Kostum Marching Band' : 'Konveksi Seragam Musik Drumband', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+              child: Text(order.orderType == OrderType.sewa ? 'Rental Kostum Marching Band' : 'Pembelian Perlengkapan & Seragam', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
             ),
             const SizedBox(height: 8),
             Padding(

@@ -347,7 +347,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
                       if (!_searching) _query = '';
                     }),
                   ),
-                  TapScale(onTap: () => _push(const AkunScreen()), child: VgAvatar(name: admin?.name ?? 'Admin')),
+                  TapScale(onTap: () => _push(const AkunScreen()), child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto)),
                 ]),
               ),
             ),

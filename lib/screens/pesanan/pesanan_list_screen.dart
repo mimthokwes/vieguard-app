@@ -242,7 +242,19 @@ class _PesananListScreenState extends State<PesananListScreen> {
                   else if (provider.errorMessage != null && provider.orders.isEmpty)
                     VgCard(child: Text(provider.errorMessage!, style: const TextStyle(color: AppColors.danger)))
                   else if (visible.isEmpty)
-                    const VgCard(child: Text('Tidak ada pesanan pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+                    VgEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: _query.isNotEmpty ? 'Pesanan Tidak Ditemukan' : 'Belum Ada Pesanan',
+                      message: _query.isNotEmpty
+                          ? 'Tidak ada pesanan yang cocok dengan "$_query". Coba periksa kembali ejaan atau ubah status filter.'
+                          : 'Daftar pesanan baru dari pelanggan akan otomatis masuk dan dapat dikelola di sini.',
+                      actionLabel: (_query.isNotEmpty || _filter != _Filter.semua || _type != null) ? 'Reset Filter' : null,
+                      onAction: () => setState(() {
+                        _query = '';
+                        _filter = _Filter.semua;
+                        _type = null;
+                      }),
+                    )
                   else
                     ...visible.map((o) => _OrderCard(order: o)),
                   if (list.isNotEmpty) ...[

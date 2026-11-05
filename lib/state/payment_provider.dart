@@ -15,6 +15,7 @@ class PaymentProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   DateTime? _lastFetched;
+  PaymentStatus? _currentStatus;
 
   bool get isFresh =>
       _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 3);
@@ -25,10 +26,11 @@ class PaymentProvider extends ChangeNotifier {
 
   /// Muat data dari penyimpanan lokal saat inisialisasi awal
   Future<void> initFromCache() async {
-    final cached = await CacheStorage.load('payments_list');
+    final cached = await CacheStorage.load('payments_list_menunggu') ?? await CacheStorage.load('payments_list');
     if (cached != null && cached is List && _payments.isEmpty) {
       try {
         _payments = cached.map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList();
+        _currentStatus = PaymentStatus.menunggu;
         notifyListeners();
         final proofs = _payments.map((p) => p.proofImage).whereType<String>().toList();
         ImageCacheService.prefetchAll(proofs);
@@ -39,12 +41,17 @@ class PaymentProvider extends ChangeNotifier {
   }
 
   Future<void> fetchPayments({PaymentStatus? status, bool force = false}) async {
-    final hasFilter = status != null;
-    if (!force && !hasFilter && isFresh && _payments.isNotEmpty) {
+    // In-flight guard: jika sedang memuat status yang sama dan tidak di-force, lewati
+    if (isLoading && !force && _currentStatus == status) {
       return;
     }
 
-    if (_payments.isEmpty) {
+    // Cache freshness guard: jika data masih fresh, ada di memori, dan status sama, lewati
+    if (!force && isFresh && _payments.isNotEmpty && _currentStatus == status) {
+      return;
+    }
+
+    if (_payments.isEmpty || _currentStatus != status) {
       isLoading = true;
       errorMessage = null;
       notifyListeners();
@@ -56,12 +63,12 @@ class PaymentProvider extends ChangeNotifier {
       final data = await apiClient.get('/payments', query: query);
       _payments = (data as List<dynamic>).map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList();
       _lastFetched = DateTime.now();
+      _currentStatus = status;
 
-      if (!hasFilter) {
-        CacheStorage.save('payments_list', data);
-        final proofs = _payments.map((p) => p.proofImage).whereType<String>().toList();
-        ImageCacheService.prefetchAll(proofs);
-      }
+      final cacheKey = status == null ? 'payments_list' : 'payments_list_${status.name}';
+      CacheStorage.save(cacheKey, data);
+      final proofs = _payments.map((p) => p.proofImage).whereType<String>().toList();
+      ImageCacheService.prefetchAll(proofs);
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {

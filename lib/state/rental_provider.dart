@@ -83,6 +83,11 @@ class RentalProvider extends ChangeNotifier {
   }
 
   Future<void> fetchRentals({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
     if (!force && isFresh && _rentalOrders.isNotEmpty) {
       return;
     }

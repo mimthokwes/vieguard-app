@@ -59,8 +59,27 @@ class OrderProvider extends ChangeNotifier {
       .where((o) => o.status != OrderStatus.pending && o.status != OrderStatus.dibatalkan)
       .fold(0, (sum, o) => sum + o.totalPrice);
 
+  double get omsetBulanIni {
+    final now = DateTime.now();
+    return _orders
+        .where((o) =>
+            o.status != OrderStatus.pending &&
+            o.status != OrderStatus.dibatalkan &&
+            o.createdAt.year == now.year &&
+            o.createdAt.month == now.month)
+        .fold(0, (sum, o) => sum + o.totalPrice);
+  }
+
+  int get activeProductionCount => _orders
+      .where((o) =>
+          o.requiresProduction &&
+          (o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil))
+      .length;
+
   double get progresProduksiRata {
-    final produksi = _orders.where((o) => o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil);
+    final produksi = _orders.where((o) =>
+        o.requiresProduction &&
+        (o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil));
     if (produksi.isEmpty) return 0;
     final total = produksi.fold<double>(0, (sum, o) => sum + (o.latestProgress / 100));
     return total / produksi.length;
@@ -90,6 +109,11 @@ class OrderProvider extends ChangeNotifier {
     String? search,
     bool force = false,
   }) async {
+    // In-flight guard: jika sedang memuat data dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
     final hasFilter = status != null || orderType != null || (search != null && search.isNotEmpty);
 
     // Jika data masih fresh, ada di memori, dan tidak ada filter spesifik, lewati fetch ulang

@@ -22,7 +22,8 @@ DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 bool _dueToday(Order o) => o.rental!.status == RentalStatus.diambil && _day(o.rental!.returnDate) == _day(DateTime.now());
 
 class PenyewaanListScreen extends StatefulWidget {
-  const PenyewaanListScreen({super.key});
+  final int initialTab;
+  const PenyewaanListScreen({super.key, this.initialTab = 0});
 
   @override
   State<PenyewaanListScreen> createState() => _PenyewaanListScreenState();
@@ -31,7 +32,7 @@ class PenyewaanListScreen extends StatefulWidget {
 class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
   static const _pageSize = 10;
 
-  int _tab = 0;
+  late int _tab = widget.initialTab;
   _RentFilter _filter = _RentFilter.semua;
   String _query = '';
   int _page = 0;
@@ -253,7 +254,18 @@ class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
           else if (provider.errorMessage != null && provider.rentalOrders.isEmpty)
             VgCard(child: Text(provider.errorMessage!, style: const TextStyle(color: AppColors.danger)))
           else if (visible.isEmpty)
-            const VgCard(child: Text('Tidak ada data penyewaan pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+            VgEmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: _query.isNotEmpty ? 'Penyewaan Tidak Ditemukan' : 'Belum Ada Data Penyewaan',
+              message: _query.isNotEmpty
+                  ? 'Tidak ada rental yang cocok dengan "$_query". Coba ubah kata kunci atau ganti filter.'
+                  : 'Data penyewaan akan otomatis ditampilkan di sini saat ada transaksi rental baru.',
+              actionLabel: (_query.isNotEmpty || _filter != _RentFilter.semua) ? 'Reset Filter' : null,
+              onAction: () => setState(() {
+                _query = '';
+                _filter = _RentFilter.semua;
+              }),
+            )
           else
             ...visible.map((o) => _RentalCard(order: o)),
           if (list.isNotEmpty) ...[

@@ -80,7 +80,7 @@ class _VgSkeletonState extends State<VgSkeleton> with SingleTickerProviderStateM
   }
 }
 
-/// Skeleton untuk Card Pesanan (Pembelian / Konveksi)
+/// Skeleton untuk Card Pesanan (Pembelian / Sewa)
 class VgOrderCardSkeleton extends StatelessWidget {
   const VgOrderCardSkeleton({super.key});
 

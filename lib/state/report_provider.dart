@@ -48,6 +48,11 @@ class ReportProvider extends ChangeNotifier {
   }
 
   Future<void> fetchSummary({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
     if (!force && isFresh && summary != null) {
       return;
     }
@@ -73,6 +78,9 @@ class ReportProvider extends ChangeNotifier {
   }
 
   void setRange(DateTime start, DateTime end) {
+    if (rangeStart == start && rangeEnd == end && isFresh && summary != null) {
+      return;
+    }
     rangeStart = start;
     rangeEnd = end;
     fetchSummary(force: true);

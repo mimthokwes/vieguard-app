@@ -175,7 +175,7 @@ class _AkunScreenState extends State<AkunScreen> {
                       Container(
                         padding: const EdgeInsets.all(3),
                         decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: VgAvatar(name: admin?.name ?? 'Admin', size: 72),
+                        child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto, size: 72),
                       ),
                       Positioned(
                         right: 0,

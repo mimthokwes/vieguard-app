@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -161,7 +160,6 @@ class VgImage extends StatefulWidget {
 
 class _VgImageState extends State<VgImage> {
   Uint8List? _bytes;
-  bool _isLoading = false;
   bool _hasError = false;
 
   @override
@@ -193,7 +191,6 @@ class _VgImageState extends State<VgImage> {
       if (mounted) {
         setState(() {
           _bytes = cachedBytes;
-          _isLoading = false;
           _hasError = false;
         });
       } else {
@@ -204,7 +201,6 @@ class _VgImageState extends State<VgImage> {
 
     if (!mounted) return;
     setState(() {
-      _isLoading = true;
       _hasError = false;
     });
 
@@ -212,7 +208,6 @@ class _VgImageState extends State<VgImage> {
     if (!mounted) return;
 
     setState(() {
-      _isLoading = false;
       _bytes = bytes;
       _hasError = bytes == null || bytes.isEmpty;
     });

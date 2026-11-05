@@ -84,6 +84,11 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> fetchAll({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
     if (!force && isFresh && _products.isNotEmpty && _categories.isNotEmpty) {
       return;
     }
