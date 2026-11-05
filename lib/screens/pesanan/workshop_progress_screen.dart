@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
 import '../../models/order_status_history_model.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import 'photo_docs_screen.dart';
 
@@ -104,7 +106,20 @@ class _WorkshopProgressScreenState extends State<WorkshopProgressScreen> {
   Widget build(BuildContext context) {
     final order = context.watch<OrderProvider>().orderById(widget.orderId);
     if (order == null) {
-      return const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Update Progres Produksi'), body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const VgBackBar(title: 'Update Progres Produksi'),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            VgSkeleton(width: double.infinity, height: 100, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 160, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 120, radius: 14),
+          ],
+        ),
+      );
     }
     _ensureDefaults(order);
 
@@ -324,7 +339,7 @@ class _WorkshopProgressScreenState extends State<WorkshopProgressScreen> {
                         child: SizedBox(
                           width: 130,
                           child: Stack(fit: StackFit.expand, children: [
-                            Image.network(p.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
+                            VgImage(url: p.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
                             if (p.title != null)
                               Positioned(
                                 left: 0,

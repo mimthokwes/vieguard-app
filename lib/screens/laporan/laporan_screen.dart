@@ -13,6 +13,7 @@ import '../../state/rental_provider.dart';
 import '../../state/report_provider.dart';
 import '../../widgets/common/date_range_picker_sheet.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 
 enum _Period { bulanIni, bulanLalu, tigaPuluhHari, tahunIni, custom }
@@ -120,7 +121,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: report.fetchSummary,
+        onRefresh: () => report.fetchSummary(force: true),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -173,8 +174,13 @@ class _LaporanScreenState extends State<LaporanScreen> {
                     ),
                   ]),
                   const SizedBox(height: 12),
-                  if (report.isLoading && summary == null)
-                    const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: Center(child: CircularProgressIndicator()))
+                  if (report.isLoading && summary == null) ...[
+                    const VgSkeleton(width: double.infinity, height: 90, radius: 14),
+                    const SizedBox(height: 12),
+                    const VgSummaryMetricsSkeleton(),
+                    const SizedBox(height: 14),
+                    const VgSkeleton(width: double.infinity, height: 180, radius: 14),
+                  ]
                   else if (summary == null)
                     VgCard(child: Text(report.errorMessage ?? 'Belum ada data laporan.', style: const TextStyle(color: AppColors.textSecondary)))
                   else ...[

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/operations_models.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_form.dart';
 import '../../widgets/vg/vg_ui.dart';
 
@@ -75,7 +77,7 @@ class _PhotoDocsScreenState extends State<PhotoDocsScreen> {
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(12),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: InteractiveViewer(child: Image.network(photo.imageUrl, fit: BoxFit.contain))),
+          Flexible(child: InteractiveViewer(child: VgImage(url: photo.imageUrl, fit: BoxFit.contain))),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
@@ -99,7 +101,17 @@ class _PhotoDocsScreenState extends State<PhotoDocsScreen> {
   Widget build(BuildContext context) {
     final order = context.watch<OrderProvider>().orderById(widget.orderId);
     if (order == null) {
-      return const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Dokumentasi Foto'), body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const VgBackBar(title: 'Dokumentasi Foto'),
+        body: GridView.count(
+          crossAxisCount: 2,
+          padding: const EdgeInsets.all(16),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          children: List.generate(4, (_) => const VgSkeleton(width: double.infinity, height: 140, radius: 12)),
+        ),
+      );
     }
     final photos = _photosFor(order.photos);
     final tabLabel = _tabs.firstWhere((t) => t.$1 == _tab).$2;

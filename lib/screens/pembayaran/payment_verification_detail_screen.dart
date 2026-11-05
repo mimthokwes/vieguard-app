@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
@@ -82,7 +83,7 @@ class _PaymentVerificationDetailScreenState extends State<PaymentVerificationDet
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(12),
         child: Stack(children: [
-          InteractiveViewer(child: Image.network(url, fit: BoxFit.contain)),
+          InteractiveViewer(child: VgImage(url: url, fit: BoxFit.contain)),
           Positioned(right: 4, top: 4, child: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(ctx))),
         ]),
       ),
@@ -239,7 +240,7 @@ class _PaymentVerificationDetailScreenState extends State<PaymentVerificationDet
                                 Text('Bukti transfer tidak dilampirkan', style: TextStyle(fontSize: 12, color: AppColors.primary)),
                               ]),
                             )
-                          : Image.network(payment.proofImage!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.surface, child: const Icon(Icons.broken_image_outlined, color: AppColors.primary))),
+                          : VgImage(url: payment.proofImage!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.surface, child: const Icon(Icons.broken_image_outlined, color: AppColors.primary))),
                     ),
                   ),
                   const SizedBox(height: 12),

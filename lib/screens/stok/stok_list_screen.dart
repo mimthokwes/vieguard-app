@@ -7,6 +7,7 @@ import '../../models/product_model.dart';
 import '../../state/product_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import 'product_form_screen.dart';
 import 'stok_detail_screen.dart';
@@ -42,7 +43,7 @@ class _StokListScreenState extends State<StokListScreen> {
   }
 
   Future<void> _refresh() async {
-    await Future.wait([context.read<ProductProvider>().fetchAll(), context.read<RentalProvider>().fetchRentals()]);
+    await Future.wait([context.read<ProductProvider>().fetchAll(force: true), context.read<RentalProvider>().fetchRentals(force: true)]);
     if (mounted) setState(() => _syncedAt = DateTime.now());
   }
 
@@ -72,8 +73,6 @@ class _StokListScreenState extends State<StokListScreen> {
         list.sort((a, b) => (b.basePriceRent ?? 0).compareTo(a.basePriceRent ?? 0));
         break;
     }
-
-    if (provider.isLoading && all.isEmpty) return const Center(child: CircularProgressIndicator());
 
     final inShell = ModalRoute.of(context)?.isFirst ?? true;
     return Stack(children: [
@@ -106,17 +105,20 @@ class _StokListScreenState extends State<StokListScreen> {
             ),
           ]),
           const SizedBox(height: 12),
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, mainAxisExtent: 98),
-            children: [
-              _StatTile(label: 'Total Koleksi', value: '$total', caption: '${provider.categories.length} Kategori Utama', icon: Icons.inventory_2_outlined),
-              _StatTile(label: 'Tersedia Gudang', value: '$ready', caption: '${pct(ready)}% Unit Ready', icon: Icons.check_circle_outline_rounded, valueColor: AppColors.success, dot: AppColors.success),
-              _StatTile(label: 'Sedang Disewa', value: '$rented', caption: '${pct(rented)}% Okupansi Aktif', icon: Icons.event_available_outlined),
-              _StatTile(label: 'Laundry / Servis', value: '$service', caption: 'Perawatan berkala', icon: Icons.local_laundry_service_outlined, valueColor: AppColors.gold),
-            ],
-          ),
+          if (provider.isLoading && all.isEmpty)
+            const VgSummaryMetricsSkeleton()
+          else
+            GridView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, mainAxisExtent: 98),
+              children: [
+                _StatTile(label: 'Total Koleksi', value: '$total', caption: '${provider.categories.length} Kategori Utama', icon: Icons.inventory_2_outlined),
+                _StatTile(label: 'Tersedia Gudang', value: '$ready', caption: '${pct(ready)}% Unit Ready', icon: Icons.check_circle_outline_rounded, valueColor: AppColors.success, dot: AppColors.success),
+                _StatTile(label: 'Sedang Disewa', value: '$rented', caption: '${pct(rented)}% Okupansi Aktif', icon: Icons.event_available_outlined),
+                _StatTile(label: 'Laundry / Servis', value: '$service', caption: 'Perawatan berkala', icon: Icons.local_laundry_service_outlined, valueColor: AppColors.gold),
+              ],
+            ),
           const SizedBox(height: 14),
           Container(
             height: 50,
@@ -177,7 +179,9 @@ class _StokListScreenState extends State<StokListScreen> {
             ),
           ]),
           const SizedBox(height: 12),
-          if (list.isEmpty)
+          if (provider.isLoading && all.isEmpty)
+            const VgSkeletonList(count: 3, item: VgOrderCardSkeleton())
+          else if (list.isEmpty)
             const VgCard(child: Text('Belum ada produk pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
           else
             ...list.map((p) => _ProductCard(product: p)),

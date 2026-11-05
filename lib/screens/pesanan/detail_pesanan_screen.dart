@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
 import '../../models/order_status.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import 'input_harga_screen.dart';
 import 'order_actions.dart';
@@ -47,7 +49,18 @@ class _DetailPesananScreenState extends State<DetailPesananScreen> {
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: const VgBackBar(title: 'Detail Pesanan'),
-        body: Center(child: _loading ? const CircularProgressIndicator() : const Text('Pesanan tidak ditemukan.')),
+        body: _loading
+            ? ListView(
+                padding: const EdgeInsets.all(16),
+                children: const [
+                  VgSkeleton(width: double.infinity, height: 110, radius: 14),
+                  SizedBox(height: 14),
+                  VgSkeleton(width: double.infinity, height: 150, radius: 14),
+                  SizedBox(height: 14),
+                  VgSkeleton(width: double.infinity, height: 200, radius: 14),
+                ],
+              )
+            : const Center(child: Text('Pesanan tidak ditemukan.')),
       );
     }
 
@@ -577,7 +590,7 @@ class _DesignCard extends StatelessWidget {
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(12),
         child: Stack(children: [
-          InteractiveViewer(child: Image.network(url, fit: BoxFit.contain)),
+          InteractiveViewer(child: VgImage(url: url, fit: BoxFit.contain)),
           Positioned(right: 4, top: 4, child: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(ctx))),
         ]),
       ),
@@ -618,7 +631,7 @@ class _DesignCard extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: Stack(fit: StackFit.expand, children: [
-                          Image.network(img.$1, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.image_not_supported_outlined, color: AppColors.primary))),
+                          VgImage(url: img.$1, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.image_not_supported_outlined, color: AppColors.primary))),
                           Positioned(
                             left: 0,
                             right: 0,
@@ -878,7 +891,7 @@ class _DocsCard extends StatelessWidget {
                   onTap: open,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(photos[i].imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
+                    child: VgImage(url: photos[i].imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
                   ),
                 ),
               ),

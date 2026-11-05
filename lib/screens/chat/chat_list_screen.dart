@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api/api_config.dart';
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/parsing.dart';
 import '../../models/conversation_model.dart';
@@ -12,10 +13,10 @@ import '../../state/auth_provider.dart';
 import '../../state/chat_provider.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import '../akun/akun_screen.dart';
 import 'chat_detail_screen.dart';
-import 'new_chat_screen.dart';
 
 enum _ChatFilter { semua, belumDibaca, konveksi, sewa, perluRespon }
 
@@ -93,8 +94,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
         if (_unreadFirst && (a.$1.unreadCount > 0) != (b.$1.unreadCount > 0)) return a.$1.unreadCount > 0 ? -1 : 1;
         return (b.$1.lastMessageAt ?? DateTime(2000)).compareTo(a.$1.lastMessageAt ?? DateTime(2000));
       });
-    final needResponse = entries.where((e) => _needsResponse(e.$2)).toList();
-    final needQuote = needResponse.where((e) => e.$2!.needsQuote).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -115,11 +114,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     Text('VIEGUARD', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
                     Text('Chat Pelanggan', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ]),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add_comment_outlined, color: AppColors.primary, size: 24),
-                  tooltip: 'Chat Baru',
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewChatScreen())),
                 ),
                 IconButton(icon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 26), onPressed: _searchFocus.requestFocus),
                 TapScale(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AkunScreen())), child: VgAvatar(name: admin?.name ?? 'Admin')),
@@ -213,36 +207,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              if (needResponse.isNotEmpty) ...[
-                TapScale(
-                  onTap: () => setState(() => _filter = _ChatFilter.perluRespon),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(14)),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const VgIconBadge(icon: Icons.priority_high_rounded, color: Colors.white, background: Color(0xFFF59E0B), size: 32),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Row(children: [
-                            Expanded(child: Text('PERHATIAN DIPERLUKAN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.goldDark, letterSpacing: 0.4))),
-                            Text('Prioritas', style: TextStyle(fontSize: 12, color: AppColors.goldDark)),
-                            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.goldDark),
-                          ]),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${needResponse.length} pelanggan menunggu respon${needQuote > 0 ? ' ($needQuote butuh penawaran harga)' : ''} & konfirmasi pesanan.',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.35),
-                          ),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
               if (chat.isLoadingList && chat.conversations.isEmpty)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                const VgSkeletonList(count: 4, item: VgChatTileSkeleton())
               else if (chat.errorMessage != null && chat.conversations.isEmpty)
                 VgCard(child: Text(chat.errorMessage!, style: const TextStyle(color: AppColors.danger)))
               else if (visible.isEmpty)
@@ -317,7 +283,7 @@ class _ConversationCard extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             alignment: Alignment.center,
             child: photo != null
-                ? Image.network(photo, fit: BoxFit.cover, width: 50, height: 50, errorBuilder: (context, error, stackTrace) => _Initial(name: c.customerName))
+                ? VgImage(url: photo, fit: BoxFit.cover, width: 50, height: 50, errorBuilder: (context, error, stackTrace) => _Initial(name: c.customerName))
                 : _Initial(name: c.customerName),
           ),
           if (unread)

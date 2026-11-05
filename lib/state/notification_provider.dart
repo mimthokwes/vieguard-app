@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
 import '../models/notification_model.dart';
 
 class NotificationProvider extends ChangeNotifier {
@@ -11,18 +12,44 @@ class NotificationProvider extends ChangeNotifier {
   List<AppNotification> _notifications = [];
   bool isLoading = false;
   String? errorMessage;
+  DateTime? _lastFetched;
+
+  bool get isFresh =>
+      _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 3);
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
-  Future<void> fetchNotifications() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  /// Muat data dari penyimpanan lokal saat inisialisasi awal
+  Future<void> initFromCache() async {
+    final cached = await CacheStorage.load('notifications_list');
+    if (cached != null && cached is List && _notifications.isEmpty) {
+      try {
+        _notifications = cached.map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
+        notifyListeners();
+      } catch (e) {
+        debugPrint('NotificationProvider.initFromCache error: $e');
+      }
+    }
+  }
+
+  Future<void> fetchNotifications({bool force = false}) async {
+    if (!force && isFresh && _notifications.isNotEmpty) {
+      return;
+    }
+
+    if (_notifications.isEmpty) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
+
     try {
       final data = await apiClient.get('/notifications');
       _notifications = (data as List<dynamic>).map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
+      _lastFetched = DateTime.now();
+      CacheStorage.save('notifications_list', data);
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {
@@ -47,6 +74,7 @@ class NotificationProvider extends ChangeNotifier {
         createdAt: old.createdAt,
       );
       notifyListeners();
+      CacheStorage.save('notifications_list', _notifications.map((n) => n.toJson()).toList());
     } on ApiException catch (e) {
       errorMessage = e.message;
     }

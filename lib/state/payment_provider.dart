@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../models/order_status.dart';
 import '../models/payment_model.dart';
 
@@ -12,20 +14,54 @@ class PaymentProvider extends ChangeNotifier {
   List<Payment> _payments = [];
   bool isLoading = false;
   String? errorMessage;
+  DateTime? _lastFetched;
+
+  bool get isFresh =>
+      _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 3);
 
   List<Payment> get payments => List.unmodifiable(_payments);
 
   int countByStatus(PaymentStatus status) => _payments.where((p) => p.status == status).length;
 
-  Future<void> fetchPayments({PaymentStatus? status}) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  /// Muat data dari penyimpanan lokal saat inisialisasi awal
+  Future<void> initFromCache() async {
+    final cached = await CacheStorage.load('payments_list');
+    if (cached != null && cached is List && _payments.isEmpty) {
+      try {
+        _payments = cached.map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList();
+        notifyListeners();
+        final proofs = _payments.map((p) => p.proofImage).whereType<String>().toList();
+        ImageCacheService.prefetchAll(proofs);
+      } catch (e) {
+        debugPrint('PaymentProvider.initFromCache error: $e');
+      }
+    }
+  }
+
+  Future<void> fetchPayments({PaymentStatus? status, bool force = false}) async {
+    final hasFilter = status != null;
+    if (!force && !hasFilter && isFresh && _payments.isNotEmpty) {
+      return;
+    }
+
+    if (_payments.isEmpty) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
+
     try {
       final query = <String, dynamic>{};
       if (status != null) query['status'] = paymentStatusToApi(status);
       final data = await apiClient.get('/payments', query: query);
       _payments = (data as List<dynamic>).map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList();
+      _lastFetched = DateTime.now();
+
+      if (!hasFilter) {
+        CacheStorage.save('payments_list', data);
+        final proofs = _payments.map((p) => p.proofImage).whereType<String>().toList();
+        ImageCacheService.prefetchAll(proofs);
+      }
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {

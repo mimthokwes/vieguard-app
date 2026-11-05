@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api/api_config.dart';
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/parsing.dart';
@@ -13,6 +14,7 @@ import '../../models/order_status.dart';
 import '../../state/chat_provider.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import '../pesanan/detail_pesanan_screen.dart';
 
@@ -106,7 +108,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         if (order != null) _OrderContextCard(order: order),
         Expanded(
           child: chat.isLoadingMessages
-              ? const Center(child: CircularProgressIndicator())
+              ? ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  children: const [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: VgSkeleton(width: 220, height: 48, radius: 14, margin: EdgeInsets.only(bottom: 12)),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: VgSkeleton(width: 180, height: 42, radius: 14, margin: EdgeInsets.only(bottom: 12)),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: VgSkeleton(width: 260, height: 60, radius: 14, margin: EdgeInsets.only(bottom: 12)),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: VgSkeleton(width: 140, height: 38, radius: 14, margin: EdgeInsets.only(bottom: 12)),
+                    ),
+                  ],
+                )
               : messages.isEmpty
                   ? const Center(child: Text('Belum ada pesan. Mulai percakapan dengan pelanggan.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)))
                   : ListView(controller: _scrollCtrl, padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), children: items),
@@ -301,7 +323,7 @@ class _MessageBubble extends StatelessWidget {
             padding: EdgeInsets.only(bottom: message.messageText?.isNotEmpty == true ? 8 : 0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(image, width: 200, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const SizedBox.shrink()),
+              child: VgImage(url: image, width: 200, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const SizedBox.shrink()),
             ),
           ),
         if (message.messageText != null && message.messageText!.isNotEmpty)

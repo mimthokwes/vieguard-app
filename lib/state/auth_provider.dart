@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../core/storage/token_storage.dart';
 import '../models/admin_model.dart';
 
@@ -118,6 +120,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _handleSessionExpired() async {
     await tokenStorage.clear();
+    await CacheStorage.clearAll();
+    await ImageCacheService.clearCache();
     currentAdmin = null;
     status = AuthStatus.unauthenticated;
     notifyListeners();

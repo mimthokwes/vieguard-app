@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 
 class RemoteImageTile extends StatelessWidget {
@@ -26,18 +27,14 @@ class RemoteImageTile extends StatelessWidget {
                 child: const Icon(Icons.image_outlined, color: AppColors.textSecondary, size: 32),
               )
             else
-              Image.network(
-                url!,
+              VgImage(
+                url: url!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: AppColors.background,
                   alignment: Alignment.center,
                   child: const Icon(Icons.broken_image_outlined, color: AppColors.textSecondary, size: 32),
                 ),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(color: AppColors.background, alignment: Alignment.center, child: const CircularProgressIndicator(strokeWidth: 2));
-                },
               ),
             Positioned(
               left: 0,

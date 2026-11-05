@@ -13,6 +13,7 @@ import '../../state/payment_provider.dart';
 import '../../state/product_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import '../penyewaan/penyewaan_list_screen.dart';
 import '../pesanan/detail_pesanan_screen.dart';
@@ -29,25 +30,22 @@ class BerandaScreen extends StatefulWidget {
 }
 
 class _BerandaScreenState extends State<BerandaScreen> {
-  DateTime? _lastUpdated;
-
   @override
   void initState() {
     super.initState();
-    Future.microtask(_refresh);
+    Future.microtask(() => _refresh(force: false));
   }
 
-  Future<void> _refresh() async {
+  Future<void> _refresh({bool force = false}) async {
     if (!mounted) return;
     final products = context.read<ProductProvider>();
     await Future.wait([
-      context.read<OrderProvider>().fetchOrders(),
-      context.read<RentalProvider>().fetchRentals(),
-      context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu),
-      context.read<NotificationProvider>().fetchNotifications(),
-      if (products.products.isEmpty) products.fetchAll(),
+      context.read<OrderProvider>().fetchOrders(force: force),
+      context.read<RentalProvider>().fetchRentals(force: force),
+      context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu, force: force),
+      context.read<NotificationProvider>().fetchNotifications(force: force),
+      if (products.products.isEmpty || force) products.fetchAll(force: force),
     ]);
-    if (mounted) setState(() => _lastUpdated = DateTime.now());
   }
 
   void _push(Widget screen) => Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -72,7 +70,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: _refresh,
+        onRefresh: () => _refresh(force: true),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -90,16 +88,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 delegate: SliverChildListDelegate([
                   _WelcomeBanner(adminName: admin?.name ?? 'Admin'),
                   const SizedBox(height: 26),
-                  VgSectionHeader(
-                    title: 'Ringkasan Hari Ini',
-                    trailing: _lastUpdated == null
-                        ? null
-                        : Row(mainAxisSize: MainAxisSize.min, children: [
-                            Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle)),
-                            const SizedBox(width: 5),
-                            Text('Update ${DateFormat('HH:mm').format(_lastUpdated!)}', style: const TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w600)),
-                          ]),
-                  ),
+                  const VgSectionHeader(title: 'Ringkasan Hari Ini'),
                   _Ringkasan(
                     pesananBaru: orders.perluTindakanCount,
                     kostumDisewa: rentedUnits,
@@ -176,7 +165,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     onAction: () => _push(const PesananListScreen()),
                   ),
                   if (orders.isLoading && orders.orders.isEmpty)
-                    const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator()))
+                    const VgSkeletonList(count: 3, item: VgOrderCardSkeleton())
                   else if (orders.errorMessage != null && orders.orders.isEmpty)
                     VgCard(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

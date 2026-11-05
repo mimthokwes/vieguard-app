@@ -39,13 +39,13 @@ class VieguardApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient, tokenStorage: tokenStorage)..tryAutoLogin()),
-        ChangeNotifierProvider(create: (_) => OrderProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => RentalProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => PaymentProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => ProductProvider(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => OrderProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => RentalProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => ProductProvider(apiClient: apiClient)..initFromCache()),
         ChangeNotifierProvider(create: (_) => ChatProvider(apiClient: apiClient, tokenStorage: tokenStorage)),
-        ChangeNotifierProvider(create: (_) => ReportProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => ReportProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)..initFromCache()),
       ],
       child: MaterialApp(
         title: 'VIEGUARD',

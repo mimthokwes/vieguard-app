@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -55,8 +56,13 @@ class _PaymentVerificationListScreenState extends State<PaymentVerificationListS
             ),
           ),
           Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
+            child: (provider.isLoading && provider.payments.isEmpty)
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    children: const [
+                      VgSkeletonList(count: 3, item: VgOrderCardSkeleton()),
+                    ],
+                  )
                 : provider.payments.isEmpty
                     ? const Center(child: Text('Tidak ada pembayaran pada status ini', style: TextStyle(color: AppColors.textSecondary)))
                     : ListView.builder(

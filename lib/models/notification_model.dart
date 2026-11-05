@@ -26,4 +26,14 @@ class AppNotification {
         isRead: json['isRead'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type,
+        'title': title,
+        'message': message,
+        'relatedOrderId': relatedOrderId,
+        'isRead': isRead,
+        'createdAt': createdAt.toIso8601String(),
+      };
 }

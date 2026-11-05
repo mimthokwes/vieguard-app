@@ -8,6 +8,7 @@ import '../../models/order_status.dart';
 import '../../state/chat_provider.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_form.dart';
 import '../../widgets/vg/vg_ui.dart';
 import 'chat_detail_screen.dart';
@@ -109,7 +110,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
           const Text('PILIH PELANGGAN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary, letterSpacing: 0.6)),
           const SizedBox(height: 10),
           if (chat.customers.isEmpty)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: CircularProgressIndicator()))
+            const VgSkeletonList(count: 3, item: VgChatTileSkeleton())
           else
             for (final c in customers.take(20))
               Padding(
