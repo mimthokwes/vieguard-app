@@ -12,6 +12,7 @@ import '../../state/order_provider.dart';
 import '../../state/payment_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import '../akun/akun_screen.dart';
 import '../pembayaran/payment_verification_detail_screen.dart';
@@ -82,10 +83,10 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   }
 
   Future<void> _refresh() => Future.wait([
-        context.read<NotificationProvider>().fetchNotifications(),
-        context.read<OrderProvider>().fetchOrders(),
-        context.read<RentalProvider>().fetchRentals(),
-        context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu),
+        context.read<NotificationProvider>().fetchNotifications(force: true),
+        context.read<OrderProvider>().fetchOrders(force: true),
+        context.read<RentalProvider>().fetchRentals(force: true),
+        context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu, force: true),
       ]);
 
   void _push(Widget screen) => Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -121,7 +122,10 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               icon: Icons.receipt_long_outlined,
               style: pending != null ? VgButtonStyle.maroon : VgButtonStyle.soft,
               height: 38,
-              onPressed: () => _push(pending != null ? PaymentVerificationDetailScreen(paymentId: pending.id) : const PaymentVerificationListScreen()),
+              onPressed: () {
+                if (!n.isRead) context.read<NotificationProvider>().markAsRead(n.id);
+                _push(pending != null ? PaymentVerificationDetailScreen(paymentId: pending.id) : const PaymentVerificationListScreen());
+              },
             ),
           ]),
         ));
@@ -140,10 +144,33 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               : Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                   VgPill(label: '#${order.orderNumber}', color: AppColors.primary, background: AppColors.beige, fontSize: 11),
                   order.needsQuote
-                      ? VgButton(label: 'Buat Draft Penawaran', icon: Icons.request_quote_outlined, style: VgButtonStyle.soft, height: 36, onPressed: () => _push(InputHargaScreen(orderId: order.id)))
-                      : VgButton(label: 'Buka Pesanan', icon: Icons.open_in_new_rounded, style: VgButtonStyle.soft, height: 36, onPressed: () => _push(DetailPesananScreen(orderId: order.id))),
+                      ? VgButton(
+                          label: 'Buat Draft Penawaran',
+                          icon: Icons.request_quote_outlined,
+                          style: VgButtonStyle.soft,
+                          height: 36,
+                          onPressed: () {
+                            if (!n.isRead) context.read<NotificationProvider>().markAsRead(n.id);
+                            _push(InputHargaScreen(orderId: order.id));
+                          },
+                        )
+                      : VgButton(
+                          label: 'Buka Pesanan',
+                          icon: Icons.open_in_new_rounded,
+                          style: VgButtonStyle.soft,
+                          height: 36,
+                          onPressed: () {
+                            if (!n.isRead) context.read<NotificationProvider>().markAsRead(n.id);
+                            _push(DetailPesananScreen(orderId: order.id));
+                          },
+                        ),
                 ]),
-          onTap: n.relatedOrderId == null ? null : () => _push(DetailPesananScreen(orderId: n.relatedOrderId!)),
+          onTap: n.relatedOrderId == null
+              ? null
+              : () {
+                  if (!n.isRead) context.read<NotificationProvider>().markAsRead(n.id);
+                  _push(DetailPesananScreen(orderId: n.relatedOrderId!));
+                },
         ));
       }
     }
@@ -240,6 +267,26 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
     return DateFormat('EEEE, d MMM yyyy', 'id_ID').format(day).toUpperCase();
   }
 
+  Future<void> _handleMarkAllAsRead() async {
+    final notifications = context.read<NotificationProvider>();
+    if (notifications.unreadCount == 0) return;
+    await notifications.markAllAsRead();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text('Semua notifikasi telah ditandai sebagai dibaca'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notifications = context.watch<NotificationProvider>();
@@ -300,7 +347,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
                       if (!_searching) _query = '';
                     }),
                   ),
-                  TapScale(onTap: () => _push(const AkunScreen()), child: VgAvatar(name: admin?.name ?? 'Admin')),
+                  TapScale(onTap: () => _push(const AkunScreen()), child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto)),
                 ]),
               ),
             ),
@@ -309,15 +356,37 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   if (_searching) ...[
-                    TextField(
-                      autofocus: true,
-                      onChanged: (v) => setState(() => _query = v),
-                      decoration: const InputDecoration(hintText: 'Cari aktivitas, pesanan, pelanggan…', prefixIcon: Icon(Icons.search_rounded)),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: TextField(
+                        autofocus: true,
+                        onChanged: (v) => setState(() => _query = v),
+                        decoration: InputDecoration(
+                          hintText: 'Cari aktivitas, pesanan, pelanggan…',
+                          hintStyle: const TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
+                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+                          suffixIcon: _query.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textSecondary),
+                                  onPressed: () => setState(() => _query = ''),
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
                   ],
+                  // 1. Kategori Filter (Tabs Horizontal)
                   SizedBox(
-                    height: 36,
+                    height: 38,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _Cat.values.length,
@@ -332,15 +401,38 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(color: selected ? AppColors.primary : AppColors.beige, borderRadius: BorderRadius.circular(10)),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: selected ? AppColors.primary : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+                              boxShadow: selected ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.18), blurRadius: 6, offset: const Offset(0, 2))] : null,
+                            ),
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Text(c == _Cat.semua ? 'Semua ($count)' : _catLabel(c), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: selected ? Colors.white : AppColors.textPrimary)),
-                              if (c != _Cat.semua && unread > 0) ...[
-                                const SizedBox(width: 8),
+                              Text(
+                                c == _Cat.semua ? 'Semua ($count)' : _catLabel(c),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                                  color: selected ? Colors.white : AppColors.textPrimary,
+                                ),
+                              ),
+                              if (unread > 0) ...[
+                                const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                                  decoration: BoxDecoration(color: AppColors.goldLight, borderRadius: BorderRadius.circular(10)),
-                                  child: Text('$unread', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.onGold)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: selected ? Colors.white : AppColors.primary,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$unread',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: selected ? AppColors.primary : Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ]),
@@ -349,40 +441,164 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text('$newToday aktivitas baru hari ini', style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary))),
-                    if (notifications.unreadCount > 0)
-                      TapScale(
-                        onTap: notifications.markAllAsRead,
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
-                          SizedBox(width: 4),
-                          Text('Tandai Semua Dibaca', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                        ]),
-                      ),
-                    const SizedBox(width: 8),
-                    TapScale(
-                      onTap: () => setState(() => _unreadOnly = !_unreadOnly),
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(color: _unreadOnly ? AppColors.primary : AppColors.beige, shape: BoxShape.circle),
-                        child: Icon(Icons.tune_rounded, size: 18, color: _unreadOnly ? Colors.white : AppColors.primary),
-                      ),
+
+                  // 2. Bar Kontrol Sederhana: Toggle Belum Dibaca / Semua & Tombol Tandai Dibaca
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14, bottom: 12),
+                    child: Row(
+                      children: [
+                        // Tombol Toggle On/Off Belum Dibaca
+                        TapScale(
+                          onTap: () => setState(() => _unreadOnly = !_unreadOnly),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _unreadOnly ? AppColors.primary : AppColors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _unreadOnly ? AppColors.primary : AppColors.border,
+                                width: 1.2,
+                              ),
+                              boxShadow: _unreadOnly
+                                  ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 6, offset: const Offset(0, 2))]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _unreadOnly ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                  size: 16,
+                                  color: _unreadOnly ? Colors.white : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  _unreadOnly ? 'Hanya Belum Dibaca' : 'Tampilkan Semua',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _unreadOnly ? Colors.white : AppColors.textPrimary,
+                                  ),
+                                ),
+                                if (notifications.unreadCount > 0) ...[
+                                  const SizedBox(width: 7),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: _unreadOnly ? Colors.white : AppColors.dangerBg,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${notifications.unreadCount}',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: _unreadOnly ? AppColors.primary : AppColors.danger,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        // Tombol Tandai Semua Dibaca
+                        if (notifications.unreadCount > 0)
+                          TapScale(
+                            onTap: _handleMarkAllAsRead,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    'Tandai Dibaca',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ]),
-                  const SizedBox(height: 16),
+                  ),
+
+                  // Informasi Aktivitas Baru Hari Ini
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12, left: 4),
+                    child: Row(
+                      children: [
+                        Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$newToday aktivitas baru hari ini',
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
                   if (dueToday.isNotEmpty || late > 0) ...[
                     _DueBanner(orders: dueToday, late: late, onOpen: () => _push(const PenyewaanListScreen())),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
                   if (notifications.isLoading && all.isEmpty)
-                    const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                    const VgSkeletonList(count: 4, item: VgNotificationCardSkeleton())
                   else if (list.isEmpty)
-                    VgCard(child: Text(_unreadOnly ? 'Tidak ada aktivitas yang belum dibaca.' : 'Belum ada aktivitas pada kategori ini.', style: const TextStyle(color: AppColors.textSecondary)))
+                    VgCard(
+                      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(color: AppColors.beigeSoft, shape: BoxShape.circle),
+                              child: Icon(
+                                _unreadOnly ? Icons.mark_email_read_outlined : Icons.notifications_off_outlined,
+                                color: AppColors.primary,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              _unreadOnly ? 'Tidak Ada Notifikasi Belum Dibaca' : 'Belum Ada Aktivitas',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _unreadOnly
+                                  ? 'Semua aktivitas dan pemberitahuan pada kategori ini sudah Anda baca.'
+                                  : 'Pemberitahuan aktivitas pesanan, sewa, dan produksi akan muncul di sini.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.4),
+                            ),
+                            if (_unreadOnly) ...[
+                              const SizedBox(height: 14),
+                              VgButton(
+                                label: 'Tampilkan Semua Notifikasi',
+                                icon: Icons.visibility_outlined,
+                                style: VgButtonStyle.soft,
+                                height: 38,
+                                onPressed: () => setState(() => _unreadOnly = false),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    )
                   else
                     for (final entry in groups.entries) ...[
                       Padding(
@@ -486,36 +702,153 @@ class _ActivityCard extends StatelessWidget {
   final String timeLabel;
   final VoidCallback onTap;
 
-  const _ActivityCard({required this.activity, required this.timeLabel, required this.onTap});
+  const _ActivityCard({
+    required this.activity,
+    required this.timeLabel,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return VgCard(
-      onTap: onTap,
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Stack(clipBehavior: Clip.none, children: [
-          VgIconBadge(icon: activity.icon, color: activity.iconColor, background: activity.iconBg, size: 42),
-          if (activity.unread)
-            Positioned(
-              right: -3,
-              top: -3,
-              child: Container(width: 11, height: 11, decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: AppColors.surface, width: 2))),
-            ),
-        ]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: Text(activity.title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.3))),
-              const SizedBox(width: 8),
-              Text(timeLabel, style: const TextStyle(fontSize: 11.5, color: AppColors.textPrimary)),
-            ]),
-            const SizedBox(height: 4),
-            Text(activity.body, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.5)),
-            if (activity.extra != null) ...[const SizedBox(height: 10), activity.extra!],
-          ]),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: activity.unread ? const Color(0xFFFFF9ED) : AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: activity.unread ? const Color(0xFFE5C189) : AppColors.border,
+          width: activity.unread ? 1.4 : 1.0,
         ),
-      ]),
+        boxShadow: activity.unread
+            ? [BoxShadow(color: const Color(0xFFD9A33A).withValues(alpha: 0.14), blurRadius: 10, offset: const Offset(0, 3))]
+            : AppColors.cardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: TapScale(
+        scaleDown: 0.99,
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: activity.unread
+                ? const Border(left: BorderSide(color: AppColors.primary, width: 4.5))
+                : null,
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      VgIconBadge(
+                        icon: activity.icon,
+                        color: activity.unread ? AppColors.primaryDark : activity.iconColor,
+                        background: activity.unread ? const Color(0xFFFCE6C3) : activity.iconBg,
+                        size: 40,
+                      ),
+                      if (activity.unread)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: AppColors.danger,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.surface, width: 1.5),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (activity.unread) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'BARU',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            Expanded(
+                              child: Text(
+                                activity.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: activity.unread ? FontWeight.w800 : FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              timeLabel,
+                              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  if (activity.onTap != null)
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 52),
+                child: Text(
+                  activity.body,
+                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.45),
+                ),
+              ),
+              if (activity.extra != null) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 52),
+                  child: activity.extra!,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

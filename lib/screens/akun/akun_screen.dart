@@ -10,7 +10,7 @@ import '../../state/payment_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
 import '../../widgets/vg/vg_ui.dart';
-import '../laporan/laporan_screen.dart';
+// import '../laporan/laporan_screen.dart';
 import '../notifikasi/notifikasi_screen.dart';
 import '../pembayaran/payment_verification_list_screen.dart';
 import '../stok/stok_list_screen.dart';
@@ -175,7 +175,7 @@ class _AkunScreenState extends State<AkunScreen> {
                       Container(
                         padding: const EdgeInsets.all(3),
                         decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: VgAvatar(name: admin?.name ?? 'Admin', size: 72),
+                        child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto, size: 72),
                       ),
                       Positioned(
                         right: 0,
@@ -218,7 +218,7 @@ class _AkunScreenState extends State<AkunScreen> {
             ),
             const SizedBox(height: 20),
             const _SectionLabel(title: 'OPERASIONAL & BISNIS', trailing: '4 Modul'),
-            _MenuCard(icon: Icons.bar_chart_rounded, title: 'Laporan & Analitik Bisnis', onTap: () => _push(const LaporanScreen())),
+            // _MenuCard(icon: Icons.bar_chart_rounded, title: 'Laporan & Analitik Bisnis', onTap: () => _push(const LaporanScreen())),
             _MenuCard(
               icon: Icons.warehouse_outlined,
               title: 'Manajemen Stok & Gudang',

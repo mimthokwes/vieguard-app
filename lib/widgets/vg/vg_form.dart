@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../common/tap_scale.dart';
 import 'vg_ui.dart';
@@ -290,7 +291,11 @@ class VgPhotoTile extends StatelessWidget {
           builder: (context, snap) => snap.hasData ? Image.memory(snap.data!, fit: BoxFit.cover) : Container(color: AppColors.beige),
         );
     } else {
-      image = Image.network(url ?? '', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.image_not_supported_outlined, color: AppColors.primary)));
+      image = VgImage(
+        url: url ?? '',
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.image_not_supported_outlined, color: AppColors.primary)),
+      );
     }
     return TapScale(
       onTap: onTap,

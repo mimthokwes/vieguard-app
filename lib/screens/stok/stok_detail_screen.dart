@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_status.dart';
@@ -32,7 +33,7 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
         backgroundColor: Colors.black,
         insetPadding: const EdgeInsets.all(12),
         child: Stack(children: [
-          InteractiveViewer(child: Image.network(url, fit: BoxFit.contain)),
+          InteractiveViewer(child: VgImage(url: url, fit: BoxFit.contain)),
           Positioned(right: 4, top: 4, child: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(ctx))),
         ]),
       ),
@@ -82,7 +83,7 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
               child: Stack(fit: StackFit.expand, children: [
                 images.isEmpty
                     ? Container(color: AppColors.beige, child: const Icon(Icons.checkroom_rounded, size: 72, color: AppColors.primary))
-                    : Image.network(images[_image], fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.checkroom_rounded, size: 72, color: AppColors.primary))),
+                    : VgImage(url: images[_image], fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige, child: const Icon(Icons.checkroom_rounded, size: 72, color: AppColors.primary))),
                 const DecoratedBox(
                   decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xCC3A0008)], stops: [0.45, 1])),
                 ),

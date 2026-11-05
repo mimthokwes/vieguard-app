@@ -8,6 +8,7 @@ import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell.dart';
+import 'screens/splash/splash_screen.dart';
 import 'state/auth_provider.dart';
 import 'state/chat_provider.dart';
 import 'state/notification_provider.dart';
@@ -16,6 +17,7 @@ import 'state/payment_provider.dart';
 import 'state/product_provider.dart';
 import 'state/rental_provider.dart';
 import 'state/report_provider.dart';
+import 'widgets/auth/auth_widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,13 +41,13 @@ class VieguardApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: apiClient, tokenStorage: tokenStorage)..tryAutoLogin()),
-        ChangeNotifierProvider(create: (_) => OrderProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => RentalProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => PaymentProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => ProductProvider(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => OrderProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => RentalProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => ProductProvider(apiClient: apiClient)..initFromCache()),
         ChangeNotifierProvider(create: (_) => ChatProvider(apiClient: apiClient, tokenStorage: tokenStorage)),
-        ChangeNotifierProvider(create: (_) => ReportProvider(apiClient: apiClient)),
-        ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)),
+        ChangeNotifierProvider(create: (_) => ReportProvider(apiClient: apiClient)..initFromCache()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)..initFromCache()),
       ],
       child: MaterialApp(
         title: 'VIEGUARD',
@@ -58,19 +60,52 @@ class VieguardApp extends StatelessWidget {
   }
 }
 
-class _AuthGate extends StatelessWidget {
+class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
   @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  bool _splashCompleted = false;
+
+  @override
   Widget build(BuildContext context) {
+    if (!_splashCompleted) {
+      return SplashScreen(
+        onFinished: () {
+          if (mounted) {
+            setState(() => _splashCompleted = true);
+          }
+        },
+      );
+    }
+
     final status = context.watch<AuthProvider>().status;
+    Widget currentScreen;
     switch (status) {
       case AuthStatus.unknown:
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        currentScreen = const Scaffold(
+          backgroundColor: AuthColors.maroonBottom,
+          body: Center(
+            child: CircularProgressIndicator(color: AuthColors.goldLight),
+          ),
+        );
+        break;
       case AuthStatus.authenticated:
-        return const MainShell();
+        currentScreen = const MainShell();
+        break;
       case AuthStatus.unauthenticated:
-        return const LoginScreen();
+        currentScreen = const LoginScreen();
+        break;
     }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 380),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: currentScreen,
+    );
   }
 }

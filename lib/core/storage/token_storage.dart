@@ -5,6 +5,7 @@ class TokenStorage {
   static const _accessKey = 'vg_access_token';
   static const _refreshKey = 'vg_refresh_token';
   static const _rememberKey = 'vg_remembered_email';
+  static const _photoKey = 'vg_admin_photo';
 
   final FlutterSecureStorage _secure = const FlutterSecureStorage();
 
@@ -28,6 +29,22 @@ class TokenStorage {
   Future<void> clear() async {
     await _secure.delete(key: _accessKey);
     await _secure.delete(key: _refreshKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_photoKey);
+  }
+
+  Future<void> saveAdminPhoto(String? photoUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (photoUrl == null || photoUrl.isEmpty) {
+      await prefs.remove(_photoKey);
+    } else {
+      await prefs.setString(_photoKey, photoUrl);
+    }
+  }
+
+  Future<String?> readAdminPhoto() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_photoKey);
   }
 
   Future<void> saveRememberedEmail(String? email) async {

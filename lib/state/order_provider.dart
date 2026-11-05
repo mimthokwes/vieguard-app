@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../models/operations_models.dart';
 import '../models/order_model.dart';
 import '../models/order_status.dart';
@@ -15,8 +17,29 @@ class OrderProvider extends ChangeNotifier {
   List<Order> _orders = [];
   bool isLoading = false;
   String? errorMessage;
+  DateTime? _lastFetched;
+
+  /// Cache dianggap masih fresh selama 5 menit
+  bool get isFresh =>
+      _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 5);
 
   List<Order> get orders => List.unmodifiable(_orders);
+
+  /// Muat data dari penyimpanan lokal saat inisialisasi awal
+  Future<void> initFromCache() async {
+    final cached = await CacheStorage.load('orders_list');
+    if (cached != null && cached is List && _orders.isEmpty) {
+      try {
+        _orders = cached.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+        notifyListeners();
+        // Prefetch thumbnail gambar dari pesanan yang di-cache
+        final images = _orders.map((o) => o.coverImage).whereType<String>().toList();
+        ImageCacheService.prefetchAll(images);
+      } catch (e) {
+        debugPrint('OrderProvider.initFromCache error: $e');
+      }
+    }
+  }
 
   Order? orderById(String id) {
     try {
@@ -36,8 +59,27 @@ class OrderProvider extends ChangeNotifier {
       .where((o) => o.status != OrderStatus.pending && o.status != OrderStatus.dibatalkan)
       .fold(0, (sum, o) => sum + o.totalPrice);
 
+  double get omsetBulanIni {
+    final now = DateTime.now();
+    return _orders
+        .where((o) =>
+            o.status != OrderStatus.pending &&
+            o.status != OrderStatus.dibatalkan &&
+            o.createdAt.year == now.year &&
+            o.createdAt.month == now.month)
+        .fold(0, (sum, o) => sum + o.totalPrice);
+  }
+
+  int get activeProductionCount => _orders
+      .where((o) =>
+          o.requiresProduction &&
+          (o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil))
+      .length;
+
   double get progresProduksiRata {
-    final produksi = _orders.where((o) => o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil);
+    final produksi = _orders.where((o) =>
+        o.requiresProduction &&
+        (o.status == OrderStatus.diproses || o.status == OrderStatus.siapDiambil));
     if (produksi.isEmpty) return 0;
     final total = produksi.fold<double>(0, (sum, o) => sum + (o.latestProgress / 100));
     return total / produksi.length;
@@ -61,10 +103,31 @@ class OrderProvider extends ChangeNotifier {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  Future<void> fetchOrders({OrderStatus? status, OrderType? orderType, String? search}) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<void> fetchOrders({
+    OrderStatus? status,
+    OrderType? orderType,
+    String? search,
+    bool force = false,
+  }) async {
+    // In-flight guard: jika sedang memuat data dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
+    final hasFilter = status != null || orderType != null || (search != null && search.isNotEmpty);
+
+    // Jika data masih fresh, ada di memori, dan tidak ada filter spesifik, lewati fetch ulang
+    if (!force && !hasFilter && isFresh && _orders.isNotEmpty) {
+      return;
+    }
+
+    // Hanya tampilkan full spinner jika belum ada data sama sekali
+    if (_orders.isEmpty) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
+
     try {
       final query = <String, dynamic>{};
       if (status != null) query['status'] = orderStatusToApi(status);
@@ -73,6 +136,14 @@ class OrderProvider extends ChangeNotifier {
 
       final data = await apiClient.get('/orders', query: query);
       _orders = (data as List<dynamic>).map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+      _lastFetched = DateTime.now();
+
+      // Simpan ke local cache untuk query umum
+      if (!hasFilter) {
+        CacheStorage.save('orders_list', data);
+        final images = _orders.map((o) => o.coverImage).whereType<String>().toList();
+        ImageCacheService.prefetchAll(images);
+      }
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {

@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../models/category_model.dart';
 import '../models/product_model.dart';
 
@@ -15,9 +17,42 @@ class ProductProvider extends ChangeNotifier {
   List<ProductCategory> _categories = [];
   bool isLoading = false;
   String? errorMessage;
+  DateTime? _lastFetched;
+
+  bool get isFresh =>
+      _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 5);
 
   List<Product> get products => List.unmodifiable(_products);
   List<ProductCategory> get categories => List.unmodifiable(_categories);
+
+  /// Muat data dari penyimpanan lokal saat inisialisasi awal
+  Future<void> initFromCache() async {
+    final pData = await CacheStorage.load('products_list');
+    final cData = await CacheStorage.load('categories_list');
+    bool changed = false;
+
+    if (pData != null && pData is List && _products.isEmpty) {
+      try {
+        _products = pData.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
+        changed = true;
+        final images = _products.expand((p) => p.imageUrls).toList();
+        ImageCacheService.prefetchAll(images);
+      } catch (e) {
+        debugPrint('ProductProvider initFromCache (products) error: $e');
+      }
+    }
+
+    if (cData != null && cData is List && _categories.isEmpty) {
+      try {
+        _categories = cData.map((e) => ProductCategory.fromJson(e as Map<String, dynamic>)).toList();
+        changed = true;
+      } catch (e) {
+        debugPrint('ProductProvider initFromCache (categories) error: $e');
+      }
+    }
+
+    if (changed) notifyListeners();
+  }
 
   Product? productById(String id) {
     try {
@@ -48,14 +83,33 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchAll() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<void> fetchAll({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
+    if (!force && isFresh && _products.isNotEmpty && _categories.isNotEmpty) {
+      return;
+    }
+
+    if (_products.isEmpty && _categories.isEmpty) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
+
     try {
       final results = await Future.wait([apiClient.get('/products'), apiClient.get('/categories')]);
       _products = (results[0] as List<dynamic>).map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
       _categories = (results[1] as List<dynamic>).map((e) => ProductCategory.fromJson(e as Map<String, dynamic>)).toList();
+      _lastFetched = DateTime.now();
+
+      CacheStorage.save('products_list', results[0]);
+      CacheStorage.save('categories_list', results[1]);
+
+      final images = _products.expand((p) => p.imageUrls).toList();
+      ImageCacheService.prefetchAll(images);
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {

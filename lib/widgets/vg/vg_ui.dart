@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/order_model.dart';
 import '../../models/order_status.dart';
@@ -309,12 +310,21 @@ class VgLogo extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.all(4),
       alignment: Alignment.center,
       child: Image.asset(
-        'assets/images/logo.png',
-        width: size * 0.78,
-        errorBuilder: (context, error, stackTrace) => Icon(Icons.shield_outlined, color: AppColors.primary, size: size * 0.6),
+        'assets/images/vieguard-logo.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          'assets/images/logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => Icon(Icons.shield_outlined, color: AppColors.primary, size: size * 0.6),
+        ),
       ),
     );
   }
@@ -322,11 +332,13 @@ class VgLogo extends StatelessWidget {
 
 class VgAvatar extends StatelessWidget {
   final String name;
+  final String? photoUrl;
   final double size;
-  const VgAvatar({super.key, required this.name, this.size = 38});
+  const VgAvatar({super.key, required this.name, this.photoUrl, this.size = 38});
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = photoUrl != null && photoUrl!.trim().isNotEmpty;
     return Container(
       width: size,
       height: size,
@@ -335,8 +347,100 @@ class VgAvatar extends StatelessWidget {
         gradient: AppColors.maroonGradient,
         border: Border.all(color: AppColors.goldLight, width: 1.5),
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: Text(name.isEmpty ? 'A' : name[0].toUpperCase(), style: TextStyle(color: AppColors.goldLight, fontWeight: FontWeight.w800, fontSize: size * 0.4)),
+      child: hasPhoto
+          ? Image.network(
+              photoUrl!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildInitial(),
+            )
+          : _buildInitial(),
+    );
+  }
+
+  Widget _buildInitial() {
+    return Text(
+      name.isEmpty ? 'A' : name[0].toUpperCase(),
+      style: TextStyle(
+        color: AppColors.goldLight,
+        fontWeight: FontWeight.w800,
+        fontSize: size * 0.4,
+      ),
+    );
+  }
+}
+
+class VgEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final EdgeInsetsGeometry padding;
+
+  const VgEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    this.padding = const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return VgCard(
+      padding: padding,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border, width: 1),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 26),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              VgButton(
+                label: actionLabel!,
+                style: VgButtonStyle.soft,
+                height: 38,
+                onPressed: onAction!,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -354,8 +458,8 @@ class VgTopBar extends StatelessWidget {
       const SizedBox(width: 10),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          const Text('VIEGUARD', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1.1)),
-          Text(subtitle, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+          const Text('VIEGUARD', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1.2, height: 1.1)),
+          Text(subtitle, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
         ]),
       ),
       TapScale(
@@ -377,7 +481,7 @@ class VgTopBar extends StatelessWidget {
       const SizedBox(width: 6),
       TapScale(
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AkunScreen())),
-        child: VgAvatar(name: admin?.name ?? 'Admin'),
+        child: VgAvatar(name: admin?.name ?? 'Admin', photoUrl: admin?.profilePhoto),
       ),
     ]);
   }
@@ -397,7 +501,14 @@ class VgThumb extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: url == null ? placeholder : Image.network(url!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => placeholder),
+        child: url == null
+            ? placeholder
+            : VgImage(
+                url: url!,
+                fit: BoxFit.cover,
+                placeholder: placeholder,
+                errorBuilder: (context, error, stackTrace) => placeholder,
+              ),
       ),
     );
   }

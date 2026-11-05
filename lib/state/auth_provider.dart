@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../core/storage/token_storage.dart';
 import '../models/admin_model.dart';
 
@@ -29,7 +31,12 @@ class AuthProvider extends ChangeNotifier {
     }
     try {
       final data = await apiClient.get('/account/me');
-      currentAdmin = Admin.fromJson(data as Map<String, dynamic>);
+      var admin = Admin.fromJson(data as Map<String, dynamic>);
+      final savedPhoto = await tokenStorage.readAdminPhoto();
+      if ((admin.profilePhoto == null || admin.profilePhoto!.isEmpty) && savedPhoto != null) {
+        admin = admin.copyWith(profilePhoto: savedPhoto);
+      }
+      currentAdmin = admin;
       status = AuthStatus.authenticated;
     } on ApiException {
       await tokenStorage.clear();
@@ -45,6 +52,74 @@ class AuthProvider extends ChangeNotifier {
     try {
       final data = await apiClient.post('/auth/login', data: {'email': email, 'password': password});
       currentAdmin = Admin.fromJson(data['admin'] as Map<String, dynamic>);
+      await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
+      status = AuthStatus.authenticated;
+      return true;
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      final data = await apiClient.post('/auth/register', data: {
+        'name': name,
+        'email': email,
+        'password': password,
+        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      });
+      currentAdmin = Admin.fromJson(data['admin'] as Map<String, dynamic>);
+      await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
+      status = AuthStatus.authenticated;
+      return true;
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> loginWithGoogle({
+    String? credential,
+    String? idToken,
+    String? email,
+    String? name,
+    String? picture,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      final payload = <String, dynamic>{};
+      if (credential != null) payload['credential'] = credential;
+      if (idToken != null) payload['idToken'] = idToken;
+      if (email != null) payload['email'] = email;
+      if (name != null) payload['name'] = name;
+      if (picture != null) payload['picture'] = picture;
+      final data = await apiClient.post('/auth/google', data: payload);
+      var admin = Admin.fromJson(data['admin'] as Map<String, dynamic>);
+      final photoToUse = (admin.profilePhoto != null && admin.profilePhoto!.isNotEmpty)
+          ? admin.profilePhoto
+          : picture;
+      if (photoToUse != null && photoToUse.isNotEmpty) {
+        admin = admin.copyWith(profilePhoto: photoToUse);
+        await tokenStorage.saveAdminPhoto(photoToUse);
+      }
+      currentAdmin = admin;
       await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
       status = AuthStatus.authenticated;
       return true;
@@ -118,6 +193,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _handleSessionExpired() async {
     await tokenStorage.clear();
+    await CacheStorage.clearAll();
+    await ImageCacheService.clearCache();
     currentAdmin = null;
     status = AuthStatus.unauthenticated;
     notifyListeners();

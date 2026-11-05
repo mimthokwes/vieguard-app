@@ -8,9 +8,9 @@ import '../../models/order_status.dart';
 import '../../state/product_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/penyewaan/rental_calendar_tab.dart';
 import '../../widgets/vg/vg_ui.dart';
-import '../stok/stok_list_screen.dart';
 import 'catat_kondisi_barang_screen.dart';
 import 'penyewaan_detail_screen.dart';
 import 'rental_actions.dart';
@@ -22,7 +22,8 @@ DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 bool _dueToday(Order o) => o.rental!.status == RentalStatus.diambil && _day(o.rental!.returnDate) == _day(DateTime.now());
 
 class PenyewaanListScreen extends StatefulWidget {
-  const PenyewaanListScreen({super.key});
+  final int initialTab;
+  const PenyewaanListScreen({super.key, this.initialTab = 0});
 
   @override
   State<PenyewaanListScreen> createState() => _PenyewaanListScreenState();
@@ -31,7 +32,7 @@ class PenyewaanListScreen extends StatefulWidget {
 class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
   static const _pageSize = 10;
 
-  int _tab = 0;
+  late int _tab = widget.initialTab;
   _RentFilter _filter = _RentFilter.semua;
   String _query = '';
   int _page = 0;
@@ -116,7 +117,6 @@ class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
             child: Row(children: [
               _tabButton(0, Icons.list_alt_rounded, 'Daftar Sewa'),
               _tabButton(1, Icons.calendar_month_outlined, 'Kalender'),
-              _tabButton(2, Icons.inventory_2_outlined, 'Stok'),
             ]),
           ),
           const SizedBox(height: 4),
@@ -124,7 +124,6 @@ class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
             child: IndexedStack(index: _tab, children: [
               _buildList(context),
               const RentalCalendarTab(),
-              const StokListScreen(),
             ]),
           ),
         ]),
@@ -143,7 +142,7 @@ class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: provider.fetchRentals,
+      onRefresh: () => provider.fetchRentals(force: true),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
         children: [
@@ -251,11 +250,22 @@ class _PenyewaanListScreenState extends State<PenyewaanListScreen> {
             const SizedBox(height: 14),
           ],
           if (provider.isLoading && provider.rentalOrders.isEmpty)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+            const VgSkeletonList(count: 3, item: VgRentalCardSkeleton())
           else if (provider.errorMessage != null && provider.rentalOrders.isEmpty)
             VgCard(child: Text(provider.errorMessage!, style: const TextStyle(color: AppColors.danger)))
           else if (visible.isEmpty)
-            const VgCard(child: Text('Tidak ada data penyewaan pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+            VgEmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: _query.isNotEmpty ? 'Penyewaan Tidak Ditemukan' : 'Belum Ada Data Penyewaan',
+              message: _query.isNotEmpty
+                  ? 'Tidak ada rental yang cocok dengan "$_query". Coba ubah kata kunci atau ganti filter.'
+                  : 'Data penyewaan akan otomatis ditampilkan di sini saat ada transaksi rental baru.',
+              actionLabel: (_query.isNotEmpty || _filter != _RentFilter.semua) ? 'Reset Filter' : null,
+              onAction: () => setState(() {
+                _query = '';
+                _filter = _RentFilter.semua;
+              }),
+            )
           else
             ...visible.map((o) => _RentalCard(order: o)),
           if (list.isNotEmpty) ...[

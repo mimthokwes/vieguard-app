@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
+import '../core/storage/cache_storage.dart';
+import '../core/storage/image_cache_service.dart';
 import '../models/order_model.dart';
 import '../models/order_status.dart';
 
@@ -14,8 +16,27 @@ class RentalProvider extends ChangeNotifier {
   List<Order> _rentalOrders = [];
   bool isLoading = false;
   String? errorMessage;
+  DateTime? _lastFetched;
+
+  bool get isFresh =>
+      _lastFetched != null && DateTime.now().difference(_lastFetched!) < const Duration(minutes: 5);
 
   List<Order> get rentalOrders => List.unmodifiable(_rentalOrders.where((o) => o.rental != null));
+
+  /// Muat data dari penyimpanan lokal saat inisialisasi awal
+  Future<void> initFromCache() async {
+    final cached = await CacheStorage.load('rentals_list');
+    if (cached != null && cached is List && _rentalOrders.isEmpty) {
+      try {
+        _rentalOrders = cached.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+        notifyListeners();
+        final images = _rentalOrders.map((o) => o.coverImage).whereType<String>().toList();
+        ImageCacheService.prefetchAll(images);
+      } catch (e) {
+        debugPrint('RentalProvider.initFromCache error: $e');
+      }
+    }
+  }
 
   Order? orderByRentalId(String rentalId) {
     try {
@@ -61,13 +82,29 @@ class RentalProvider extends ChangeNotifier {
       ..sort((a, b) => a.rental!.returnDate.compareTo(b.rental!.returnDate));
   }
 
-  Future<void> fetchRentals() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+  Future<void> fetchRentals({bool force = false}) async {
+    // In-flight guard: jika sedang memuat dan tidak di-force, lewati
+    if (isLoading && !force) {
+      return;
+    }
+
+    if (!force && isFresh && _rentalOrders.isNotEmpty) {
+      return;
+    }
+
+    if (_rentalOrders.isEmpty) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
+
     try {
       final data = await apiClient.get('/orders', query: {'orderType': 'sewa'});
       _rentalOrders = (data as List<dynamic>).map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+      _lastFetched = DateTime.now();
+      CacheStorage.save('rentals_list', data);
+      final images = _rentalOrders.map((o) => o.coverImage).whereType<String>().toList();
+      ImageCacheService.prefetchAll(images);
     } on ApiException catch (e) {
       errorMessage = e.message;
     } finally {

@@ -347,3 +347,95 @@ class _ArcClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
+
+class AuthLogo extends StatelessWidget {
+  final String? subtitle;
+  const AuthLogo({super.key, this.subtitle = 'Selamat Datang!'});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          'assets/images/logo.png',
+          height: 64,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stack) => ShaderMask(
+            shaderCallback: (r) => const LinearGradient(colors: [AuthColors.goldDark, AuthColors.goldLight]).createShader(r),
+            child: Text('V', style: GoogleFonts.cinzel(fontSize: 44, fontWeight: FontWeight.w700, color: Colors.white, height: 1.1)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ShaderMask(
+          shaderCallback: (r) => const LinearGradient(colors: [AuthColors.goldDark, AuthColors.goldLight, AuthColors.goldDark]).createShader(r),
+          child: Text('VIEGUARD', style: GoogleFonts.cinzel(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 6)),
+        ),
+        if (subtitle != null && subtitle!.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(subtitle!, style: GoogleFonts.greatVibes(fontSize: 24, color: AuthColors.gold)),
+        ],
+      ],
+    );
+  }
+}
+
+class GoogleButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  final bool loading;
+  final String label;
+
+  const GoogleButton({
+    super.key,
+    required this.onTap,
+    this.loading = false,
+    this.label = 'Google',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TapScale(
+      onTap: loading ? null : onTap,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E0005),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AuthColors.border),
+        ),
+        child: loading
+            ? const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AuthColors.gold),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      'G',
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF4285F4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(label, style: sans(15, weight: FontWeight.w600)),
+                ],
+              ),
+      ),
+    );
+  }
+}

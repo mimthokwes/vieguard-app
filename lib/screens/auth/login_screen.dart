@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../state/auth_provider.dart';
 import '../../widgets/auth/auth_widgets.dart';
+import '../../widgets/auth/google_auth_sheet.dart';
 import '../../widgets/common/tap_scale.dart';
 import 'forgot_password_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     Future.microtask(() async {
+      if (!mounted) return;
       final saved = await context.read<AuthProvider>().tokenStorage.readRememberedEmail();
       if (saved != null && mounted) setState(() => _emailCtrl.text = saved);
     });
@@ -51,14 +54,14 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: AuthBackground(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           children: [
-            const _Logo(),
-            const SizedBox(height: 20),
+            const AuthLogo(subtitle: 'Selamat Datang!'),
+            const SizedBox(height: 18),
             AuthCard(children: [
               const AuthLabel('Email'),
               AuthField(controller: _emailCtrl, hint: 'nama@email.com', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               const AuthLabel('Kata Sandi'),
               AuthField(controller: _passwordCtrl, hint: 'Masukkan kata sandi', icon: Icons.lock_outline_rounded, isPassword: true, onSubmitted: (_) => _submit()),
               const SizedBox(height: 16),
@@ -86,57 +89,42 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text('Lupa kata sandi?', style: sans(14)),
                 ),
               ]),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
               GoldButton(label: 'Masuk', loading: auth.isLoading, onPressed: _submit),
-              const SizedBox(height: 28),
-              const OrDivider('ATAU LANJUTKAN DENGAN'),
               const SizedBox(height: 22),
-              TapScale(
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Login dengan Google belum tersedia untuk akun admin.')),
-                ),
-                child: Container(
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E0005),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: AuthColors.border),
-                  ),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text('G', style: GoogleFonts.roboto(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF4285F4))),
-                    const SizedBox(width: 12),
-                    Text('Google', style: sans(16)),
-                  ]),
-                ),
+              const OrDivider('ATAU LANJUTKAN DENGAN'),
+              const SizedBox(height: 18),
+              GoogleButton(
+                loading: auth.isLoading,
+                onTap: () => handleGoogleSignInFlow(context),
               ),
             ]),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Belum punya akun? ', style: sans(15)),
+                TapScale(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  ),
+                  child: Text(
+                    'Daftar Sekarang',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AuthColors.goldLight,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AuthColors.goldLight,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Image.asset(
-        'assets/images/logo.png',
-        height: 150,
-        errorBuilder: (context, error, stack) => ShaderMask(
-          shaderCallback: (r) => const LinearGradient(colors: [AuthColors.goldDark, AuthColors.goldLight]).createShader(r),
-          child: Text('V', style: GoogleFonts.cinzel(fontSize: 80, fontWeight: FontWeight.w700, color: Colors.white, height: 1.1)),
-        ),
-      ),
-      const SizedBox(height: 16),
-      ShaderMask(
-        shaderCallback: (r) => const LinearGradient(colors: [AuthColors.goldDark, AuthColors.goldLight, AuthColors.goldDark]).createShader(r),
-        child: Text('VIEGUARD', style: GoogleFonts.cinzel(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 8)),
-      ),
-      Text('Selamat Datang!', style: GoogleFonts.greatVibes(fontSize: 34, color: AuthColors.gold)),
-    ]);
   }
 }

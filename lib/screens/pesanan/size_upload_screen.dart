@@ -13,6 +13,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/operations_models.dart';
 import '../../state/order_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_form.dart';
 import '../../widgets/vg/vg_ui.dart';
 
@@ -228,7 +229,20 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     final order = context.watch<OrderProvider>().orderById(widget.orderId);
     final entries = _entries;
     if (order == null || entries == null) {
-      return const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Data Ukuran Siswa'), body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const VgBackBar(title: 'Data Ukuran Siswa'),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            VgSkeleton(width: double.infinity, height: 90, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 180, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 120, radius: 14),
+          ],
+        ),
+      );
     }
 
     final counts = <String, int>{};

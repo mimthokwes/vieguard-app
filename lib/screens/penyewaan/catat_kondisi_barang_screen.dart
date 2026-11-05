@@ -13,6 +13,7 @@ import '../../models/order_status.dart';
 import '../../state/auth_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import 'refund_screen.dart';
 
@@ -137,7 +138,20 @@ class _CatatKondisiBarangScreenState extends State<CatatKondisiBarangScreen> {
     final order = _order(context.watch<RentalProvider>());
     final admin = context.watch<AuthProvider>().currentAdmin;
     if (order == null) {
-      return const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Catat Kondisi Barang'), body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const VgBackBar(title: 'Catat Kondisi Barang'),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            VgSkeleton(width: double.infinity, height: 90, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 160, radius: 14),
+            SizedBox(height: 14),
+            VgSkeleton(width: double.infinity, height: 140, radius: 14),
+          ],
+        ),
+      );
     }
     if (!_draftLoaded) _loadDraft(order);
 

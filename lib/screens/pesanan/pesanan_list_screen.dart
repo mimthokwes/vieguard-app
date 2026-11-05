@@ -8,6 +8,7 @@ import '../../models/order_status.dart';
 import '../../state/order_provider.dart';
 import '../../state/payment_provider.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
 import '../pembayaran/payment_verification_list_screen.dart';
 import 'detail_pesanan_screen.dart';
@@ -45,8 +46,8 @@ class _PesananListScreenState extends State<PesananListScreen> {
   }
 
   Future<void> _refresh() => Future.wait([
-        context.read<OrderProvider>().fetchOrders(),
-        context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu),
+        context.read<OrderProvider>().fetchOrders(force: true),
+        context.read<PaymentProvider>().fetchPayments(status: PaymentStatus.menunggu, force: true),
       ]);
 
   bool _matches(Order o, _Filter f) {
@@ -137,7 +138,7 @@ class _PesananListScreenState extends State<PesananListScreen> {
               automaticallyImplyLeading: false,
               titleSpacing: 16,
               leading: Navigator.canPop(context) ? const BackButton(color: AppColors.primary) : null,
-              title: const VgTopBar(subtitle: 'Pesanan'),
+              title: const VgTopBar(subtitle: 'Pembelian'),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
@@ -237,11 +238,23 @@ class _PesananListScreenState extends State<PesananListScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (provider.isLoading && provider.orders.isEmpty)
-                    const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                    const VgSkeletonList(count: 3, item: VgOrderCardSkeleton())
                   else if (provider.errorMessage != null && provider.orders.isEmpty)
                     VgCard(child: Text(provider.errorMessage!, style: const TextStyle(color: AppColors.danger)))
                   else if (visible.isEmpty)
-                    const VgCard(child: Text('Tidak ada pesanan pada filter ini.', style: TextStyle(color: AppColors.textSecondary)))
+                    VgEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: _query.isNotEmpty ? 'Pesanan Tidak Ditemukan' : 'Belum Ada Pesanan',
+                      message: _query.isNotEmpty
+                          ? 'Tidak ada pesanan yang cocok dengan "$_query". Coba periksa kembali ejaan atau ubah status filter.'
+                          : 'Daftar pesanan baru dari pelanggan akan otomatis masuk dan dapat dikelola di sini.',
+                      actionLabel: (_query.isNotEmpty || _filter != _Filter.semua || _type != null) ? 'Reset Filter' : null,
+                      onAction: () => setState(() {
+                        _query = '';
+                        _filter = _Filter.semua;
+                        _type = null;
+                      }),
+                    )
                   else
                     ...visible.map((o) => _OrderCard(order: o)),
                   if (list.isNotEmpty) ...[

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_item_model.dart';
@@ -412,7 +413,7 @@ class _QcOutCard extends StatelessWidget {
               height: 120,
               width: double.infinity,
               child: Stack(fit: StackFit.expand, children: [
-                Image.network(rental.agreementPhoto!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
+                VgImage(url: rental.agreementPhoto!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: AppColors.beige)),
                 const Positioned(left: 8, bottom: 8, child: VgPill(label: 'Surat perjanjian bertanda tangan', color: Colors.white, background: Color(0xAA7A0015), fontSize: 10.5)),
               ]),
             ),
