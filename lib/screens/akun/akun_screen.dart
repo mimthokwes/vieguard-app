@@ -201,7 +201,7 @@ class _AkunScreenState extends State<AkunScreen> {
                     Text(admin?.name ?? '-', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                     const SizedBox(height: 2),
                     Text(
-                      ['Admin ID: ${admin?.id ?? '-'}', ?admin?.email, ?admin?.phone].join(' • '),
+                      [?admin?.email, ?admin?.phone].join(' • '),
                       style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 14),
