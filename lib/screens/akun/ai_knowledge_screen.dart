@@ -175,14 +175,17 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Tambah Pemahaman Baru',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
+                            const Expanded(
+                              child: Text(
+                                'Tambah Pemahaman Baru',
+                                style: TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 8),
                             VgPill(
                               label: isActive ? 'Siap Menjawab' : 'Belum Ada Data',
                               color: isActive ? const Color(0xFF22A447) : AppColors.danger,
