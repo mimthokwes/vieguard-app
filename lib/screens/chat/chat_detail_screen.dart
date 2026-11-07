@@ -326,7 +326,7 @@ class _MessageBubble extends StatelessWidget {
             ),
           ),
         if (message.messageText != null && message.messageText!.isNotEmpty)
-          Text(message.messageText!, style: TextStyle(fontSize: 14.5, height: 1.45, color: admin ? Colors.white : AppColors.textPrimary)),
+          _FormattedChatMessage(text: message.messageText!, isFromAdmin: admin),
       ]),
     );
 
@@ -369,5 +369,221 @@ class _MessageBubble extends StatelessWidget {
         ),
       ]),
     );
+  }
+}
+
+class _FormattedChatMessage extends StatelessWidget {
+  final String text;
+  final bool isFromAdmin;
+
+  const _FormattedChatMessage({
+    required this.text,
+    required this.isFromAdmin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = isFromAdmin ? Colors.white : AppColors.textPrimary;
+    final baseStyle = TextStyle(
+      fontSize: 14.5,
+      height: 1.45,
+      color: baseColor,
+    );
+    final boldStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w700,
+      color: baseColor,
+    );
+    final italicStyle = baseStyle.copyWith(
+      fontStyle: FontStyle.italic,
+      color: baseColor,
+    );
+    final boldItalicStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w700,
+      fontStyle: FontStyle.italic,
+      color: baseColor,
+    );
+
+    final lines = text.split('\n');
+    final bulletRegex = RegExp(r'^(\s*)([-*])\s+(.*)$');
+    final numberedRegex = RegExp(r'^(\s*)(\d+)\.\s+(.*)$');
+    final headingRegex = RegExp(r'^(#{1,3})\s+(.*)$');
+
+    final children = <Widget>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty) {
+        children.add(const SizedBox(height: 6));
+        continue;
+      }
+
+      final headingMatch = headingRegex.firstMatch(line);
+      if (headingMatch != null) {
+        final headingText = headingMatch.group(2) ?? '';
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Text.rich(
+              TextSpan(
+                children: _parseInlineSpans(
+                  headingText,
+                  baseStyle: boldStyle.copyWith(fontSize: 15),
+                  boldStyle: boldStyle.copyWith(fontSize: 15),
+                  italicStyle: boldItalicStyle.copyWith(fontSize: 15),
+                  boldItalicStyle: boldItalicStyle.copyWith(fontSize: 15),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      final bulletMatch = bulletRegex.firstMatch(line);
+      if (bulletMatch != null) {
+        final itemText = bulletMatch.group(3) ?? '';
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 2, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 7, right: 8),
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isFromAdmin ? Colors.white : AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: _parseInlineSpans(
+                        itemText,
+                        baseStyle: baseStyle,
+                        boldStyle: boldStyle,
+                        italicStyle: italicStyle,
+                        boldItalicStyle: boldItalicStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      final numMatch = numberedRegex.firstMatch(line);
+      if (numMatch != null) {
+        final num = numMatch.group(2) ?? '1';
+        final itemText = numMatch.group(3) ?? '';
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 2, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 20,
+                  child: Text(
+                    '$num.',
+                    style: baseStyle.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: isFromAdmin ? Colors.white : AppColors.primary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: _parseInlineSpans(
+                        itemText,
+                        baseStyle: baseStyle,
+                        boldStyle: boldStyle,
+                        italicStyle: italicStyle,
+                        boldItalicStyle: boldItalicStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Normal line
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Text.rich(
+            TextSpan(
+              children: _parseInlineSpans(
+                line,
+                baseStyle: baseStyle,
+                boldStyle: boldStyle,
+                italicStyle: italicStyle,
+                boldItalicStyle: boldItalicStyle,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
+    );
+  }
+
+  static List<InlineSpan> _parseInlineSpans(
+    String text, {
+    required TextStyle baseStyle,
+    required TextStyle boldStyle,
+    required TextStyle italicStyle,
+    required TextStyle boldItalicStyle,
+  }) {
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(r'(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*|\*(?!\s)[^*]+?(?<!\s)\*)');
+    final matches = pattern.allMatches(text);
+
+    int lastEnd = 0;
+    for (final m in matches) {
+      if (m.start > lastEnd) {
+        spans.add(TextSpan(text: text.substring(lastEnd, m.start), style: baseStyle));
+      }
+      final matchText = m.group(0)!;
+      if (matchText.startsWith('***') && matchText.endsWith('***') && matchText.length > 6) {
+        spans.add(TextSpan(
+          text: matchText.substring(3, matchText.length - 3),
+          style: boldItalicStyle,
+        ));
+      } else if (matchText.startsWith('**') && matchText.endsWith('**') && matchText.length > 4) {
+        spans.add(TextSpan(
+          text: matchText.substring(2, matchText.length - 2),
+          style: boldStyle,
+        ));
+      } else if (matchText.startsWith('*') && matchText.endsWith('*') && matchText.length > 2) {
+        spans.add(TextSpan(
+          text: matchText.substring(1, matchText.length - 1),
+          style: italicStyle,
+        ));
+      }
+      lastEnd = m.end;
+    }
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd), style: baseStyle));
+    }
+
+    return spans;
   }
 }

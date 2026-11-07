@@ -328,7 +328,9 @@ class _ConversationCard extends StatelessWidget {
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Expanded(
                 child: Text(
-                  c.lastMessageText == null ? 'Belum ada pesan' : '${c.lastFromAdmin ? 'Anda' : c.customerName.split(' ').first}: "${c.lastMessageText}"',
+                  c.lastMessageText == null
+                      ? 'Belum ada pesan'
+                      : '${c.lastFromAdmin ? 'Anda' : c.customerName.split(' ').first}: "${c.lastMessageText!.replaceAll('**', '').replaceAll('*', '')}"',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 13, height: 1.35, color: AppColors.textPrimary, fontWeight: unread ? FontWeight.w700 : FontWeight.w500),
