@@ -211,58 +211,66 @@ class _OrderContextCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dpVerified = order.amountPaid > 0;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.border), boxShadow: AppColors.cardShadow),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const VgIconBadge(icon: Icons.inventory_2_outlined, size: 44),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: Text('Pesanan #${order.orderNumber}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary))),
-                TapScale(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DetailPesananScreen(orderId: order.id))),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('Lihat', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                    Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.primary),
-                  ]),
-                ),
-              ]),
-              const SizedBox(height: 4),
-              OrderStatusPill(order: order),
-              const SizedBox(height: 4),
-              Text('${order.headline} (${order.totalQuantity} Stel)', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: AppColors.primary)),
-            ]),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            VgPill(label: 'Total: ${order.needsQuote ? 'Belum ditentukan' : Formatters.rupiah(order.totalPrice)}', color: AppColors.textPrimary, background: AppColors.beige, icon: Icons.payments_outlined, fontSize: 11.5),
-            const SizedBox(width: 8),
-            VgPill(
-              label: dpVerified ? 'DP: Terverifikasi' : 'DP: Belum dibayar',
-              color: dpVerified ? AppColors.success : AppColors.warning,
-              background: AppColors.beige,
-              icon: dpVerified ? Icons.verified_outlined : Icons.schedule_rounded,
-              fontSize: 11.5,
-            ),
-            if (order.deadlineDate != null) ...[
-              const SizedBox(width: 8),
-              VgPill(label: 'Target: ${Formatters.date(order.deadlineDate!)}', color: AppColors.textPrimary, background: AppColors.beige, icon: Icons.event_outlined, fontSize: 11.5),
-            ],
-            if (order.status == OrderStatus.diproses) ...[
-              const SizedBox(width: 8),
-              VgPill(label: 'Progres ${order.latestProgress}%', color: AppColors.primary, background: AppColors.beige, icon: Icons.precision_manufacturing_outlined, fontSize: 11.5),
-            ],
-          ]),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: TapScale(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => DetailPesananScreen(orderId: order.id)),
         ),
-      ]),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.cardShadow,
+          ),
+          child: Row(
+            children: [
+              VgThumb(url: order.coverImage, size: 48, radius: 10),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      order.headline,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${order.orderType.label} · #${order.orderNumber}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    OrderStatusPill(order: order),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

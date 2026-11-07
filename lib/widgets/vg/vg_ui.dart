@@ -555,7 +555,8 @@ class VgMoneyField extends StatelessWidget {
 class VgBackBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget> actions;
-  const VgBackBar({super.key, required this.title, this.actions = const []});
+  final bool showProfile;
+  const VgBackBar({super.key, required this.title, this.actions = const [], this.showProfile = false});
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -575,7 +576,10 @@ class VgBackBar extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 10),
             Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary))),
             ...actions,
-            Padding(padding: const EdgeInsets.only(right: 16, left: 4), child: VgAvatar(name: admin?.name ?? 'Admin', size: 34)),
+            if (showProfile)
+              Padding(padding: const EdgeInsets.only(right: 16, left: 4), child: VgAvatar(name: admin?.name ?? 'Admin', size: 34))
+            else
+              const SizedBox(width: 16),
           ]),
         ),
       ),
