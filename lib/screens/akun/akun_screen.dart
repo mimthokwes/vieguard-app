@@ -218,11 +218,11 @@ class _AkunScreenState extends State<AkunScreen> {
               ]),
             ),
             const SizedBox(height: 20),
-            const _SectionLabel(title: 'OPERASIONAL & AI', trailing: '4 Modul'),
+            const _SectionLabel(title: 'OPERASIONAL & BISNIS', trailing: '4 Modul'),
             _MenuCard(
               icon: Icons.psychology_rounded,
-              title: 'Knowledge Base AI (RAG)',
-              badge: 'Smart CS',
+              title: 'Pemahaman AI',
+              badge: 'Chatbot',
               onTap: () => _push(const AiKnowledgeScreen()),
             ),
             _MenuCard(

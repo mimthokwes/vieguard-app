@@ -17,7 +17,6 @@ class AiKnowledgeScreen extends StatefulWidget {
 class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
   bool _loading = true;
   bool _uploading = false;
-  String? _errorMessage;
 
   Map<String, dynamic>? _knowledgeData;
 
@@ -30,7 +29,6 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
   Future<void> _fetchKnowledgeStatus() async {
     setState(() {
       _loading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -43,13 +41,11 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
         });
       } else {
         setState(() {
-          _errorMessage = 'Format data status tidak valid.';
           _loading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       setState(() {
-        _errorMessage = 'Gagal memuat status AI: $e';
         _loading = false;
       });
     }
@@ -76,16 +72,13 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
         'file': MultipartFile.fromBytes(bytes, filename: file.name),
       });
 
-      await auth.apiClient.postForm(
-        '/ai/knowledge',
-        formData,
-      );
+      await auth.apiClient.postForm('/ai/knowledge', formData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFF22A447),
-            content: Text('Dokumen berhasil diunggah dan diindeks ke dalam AI!'),
+            content: Text('Dokumen berhasil ditambahkan ke AI!'),
           ),
         );
       }
@@ -121,7 +114,7 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFF22A447),
-            content: Text('Indeks vektor AI berhasil disinkronkan ulang!'),
+            content: Text('Pemahaman AI berhasil disinkronkan ulang!'),
           ),
         );
       }
@@ -131,7 +124,7 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppColors.danger,
-            content: Text('Gagal memperbarui indeks: $e'),
+            content: Text('Gagal menyinkronkan AI: $e'),
           ),
         );
       }
@@ -161,13 +154,11 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
   @override
   Widget build(BuildContext context) {
     final files = (_knowledgeData?['files'] as List<dynamic>?) ?? [];
-    final totalChunks = _knowledgeData?['total_chunks_indexed'] ?? 0;
-    final chatModel = _knowledgeData?['chat_model'] ?? 'gemini-3.5-flash-lite';
-    final embeddingModel = _knowledgeData?['embedding_model'] ?? 'gemini-embedding-001';
+    final isActive = _knowledgeData?['index_exists'] == true;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const VgBackBar(title: 'Knowledge Base AI (RAG)'),
+      appBar: const VgBackBar(title: 'Pemahaman AI'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -175,7 +166,7 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 children: [
-                  // Status Summary Card
+                  // Card Utama: Tambah Pemahaman Baru
                   VgCard(
                     padding: const EdgeInsets.all(18),
                     child: Column(
@@ -184,74 +175,39 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.psychology_rounded, color: AppColors.primary, size: 24),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Status Model AI',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                ),
-                              ],
+                            const Text(
+                              'Tambah Pemahaman Baru',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                             VgPill(
-                              label: _knowledgeData?['index_exists'] == true ? 'Aktif' : 'Perlu Diindeks',
-                              color: _knowledgeData?['index_exists'] == true ? const Color(0xFF22A447) : AppColors.danger,
-                              background: _knowledgeData?['index_exists'] == true ? const Color(0xFFE8F7ED) : AppColors.dangerBg,
+                              label: isActive ? 'Siap Menjawab' : 'Belum Ada Data',
+                              color: isActive ? const Color(0xFF22A447) : AppColors.danger,
+                              background: isActive ? const Color(0xFFE8F7ED) : AppColors.dangerBg,
                               fontSize: 11,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        VgInset(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _StatItem(value: '${files.length}', label: 'Dokumen'),
-                              Container(height: 30, width: 1, color: Colors.black12),
-                              _StatItem(value: '$totalChunks', label: 'Vektor Chunks'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Model: $chatModel • Embed: $embeddingModel',
-                          style: const TextStyle(fontSize: 11.5, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Action Card: Upload & Sync
-                  VgCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                        const SizedBox(height: 8),
                         const Text(
-                          'Tambah Pengetahuan Baru',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          'Unggah aturan atau panduan toko agar chatbot dapat otomatis menjawab pertanyaan pelanggan.',
+                          style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Unggah dokumen SOP, panduan sensor, atau kebijakan. AI akan langsung memproses dan mengindeks dokumen agar chatbot dapat menjawab pertanyaan pelanggan.',
-                          style: TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.4),
-                        ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         if (_uploading)
                           const Center(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 10),
+                              padding: EdgeInsets.symmetric(vertical: 12),
                               child: Column(
                                 children: [
                                   CircularProgressIndicator(),
-                                  SizedBox(height: 8),
+                                  SizedBox(height: 10),
                                   Text(
-                                    'Memproses dokumen & menghasilkan vektor...',
-                                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                                    'Menyimpan dan mempelajari dokumen...',
+                                    style: TextStyle(fontSize: 12.5, color: Colors.black54),
                                   ),
                                 ],
                               ),
@@ -259,13 +215,13 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                           )
                         else ...[
                           VgButton(
-                            label: 'Pilih & Unggah Dokumen (.pdf, .docx, .txt)',
+                            label: 'Unggah Dokumen',
                             icon: Icons.upload_file_rounded,
                             onPressed: _pickAndUploadDocument,
                           ),
                           const SizedBox(height: 10),
                           VgButton(
-                            label: 'Perbarui / Sinkronkan Indeks Manual',
+                            label: 'Sinkronkan Ulang',
                             style: VgButtonStyle.soft,
                             icon: Icons.sync_rounded,
                             onPressed: _rebuildIndexManual,
@@ -275,30 +231,35 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
-                  // Document List Section
+                  // Daftar Dokumen Aktif
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'DOKUMEN TERINDARISIR',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black54, letterSpacing: 0.8),
+                        'DOKUMEN AKTIF',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black54,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                       Text(
-                        '${files.length} File',
+                        '${files.length} Dokumen',
                         style: const TextStyle(fontSize: 12, color: Colors.black54),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   if (files.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+                      padding: EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Text(
-                          'Belum ada dokumen. Silakan unggah dokumen pertama Anda.',
+                          'Belum ada dokumen yang diunggah.',
                           style: TextStyle(fontSize: 13, color: Colors.black45),
                         ),
                       ),
@@ -317,13 +278,13 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                           child: Row(
                             children: [
                               Container(
-                                width: 40,
-                                height: 40,
+                                width: 38,
+                                height: 38,
                                 decoration: BoxDecoration(
                                   color: AppColors.beige,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Icon(_getFileIcon(ext), color: AppColors.primary, size: 22),
+                                child: Icon(_getFileIcon(ext), color: AppColors.primary, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -332,7 +293,11 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                                   children: [
                                     Text(
                                       name,
-                                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -353,24 +318,6 @@ class _AiKnowledgeScreenState extends State<AiKnowledgeScreen> {
                 ],
               ),
             ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11.5, color: Colors.black54)),
-      ],
     );
   }
 }
