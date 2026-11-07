@@ -14,6 +14,7 @@ import '../../widgets/vg/vg_ui.dart';
 import '../notifikasi/notifikasi_screen.dart';
 import '../pembayaran/payment_verification_list_screen.dart';
 import '../stok/stok_list_screen.dart';
+import 'ai_knowledge_screen.dart';
 
 class AkunScreen extends StatefulWidget {
   const AkunScreen({super.key});
@@ -217,8 +218,13 @@ class _AkunScreenState extends State<AkunScreen> {
               ]),
             ),
             const SizedBox(height: 20),
-            const _SectionLabel(title: 'OPERASIONAL & BISNIS', trailing: '4 Modul'),
-            // _MenuCard(icon: Icons.bar_chart_rounded, title: 'Laporan & Analitik Bisnis', onTap: () => _push(const LaporanScreen())),
+            const _SectionLabel(title: 'OPERASIONAL & AI', trailing: '4 Modul'),
+            _MenuCard(
+              icon: Icons.psychology_rounded,
+              title: 'Knowledge Base AI (RAG)',
+              badge: 'Smart CS',
+              onTap: () => _push(const AiKnowledgeScreen()),
+            ),
             _MenuCard(
               icon: Icons.warehouse_outlined,
               title: 'Manajemen Stok & Gudang',
