@@ -17,13 +17,15 @@ Future<void> confirmOrderFlow(BuildContext context, Order order) async {
     builder: (ctx) => AlertDialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      title: const Text('Konfirmasi Pesanan'),
+      title: const Text('Konfirmasi Bahan & Pesanan'),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('#${order.orderNumber} • ${order.customer.name}', style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         Text('Total ${Formatters.rupiah(order.totalPrice)}', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
-        const SizedBox(height: 14),
-        const Text('Nominal DP yang harus dibayar', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        const Text('Pastikan ketersediaan bahan kain di supplier sudah aman.', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+        const SizedBox(height: 12),
+        const Text('Nominal DP yang harus dibayar pelanggan (50%)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         VgMoneyField(controller: controller),
       ]),
@@ -32,7 +34,7 @@ Future<void> confirmOrderFlow(BuildContext context, Order order) async {
         Row(children: [
           Expanded(child: VgButton(label: 'Batal', style: VgButtonStyle.soft, onPressed: () => Navigator.pop(ctx, false))),
           const SizedBox(width: 10),
-          Expanded(child: VgButton(label: 'Konfirmasi', style: VgButtonStyle.gold, onPressed: () => Navigator.pop(ctx, true))),
+          Expanded(child: VgButton(label: 'Konfirmasi Tersedia', style: VgButtonStyle.gold, onPressed: () => Navigator.pop(ctx, true))),
         ]),
       ],
     ),

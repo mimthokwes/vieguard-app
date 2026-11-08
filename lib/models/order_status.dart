@@ -126,7 +126,7 @@ extension OrderStatusX on OrderStatus {
   String get label {
     switch (this) {
       case OrderStatus.pending:
-        return 'Menunggu Konfirmasi';
+        return 'Menunggu Cek Bahan';
       case OrderStatus.dikonfirmasi:
         return 'Dikonfirmasi';
       case OrderStatus.diproses:

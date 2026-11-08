@@ -221,23 +221,31 @@ class _CustomHeader extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(order.needsQuote ? 'Estimasi Biaya Belum Ditentukan' : 'Penawaran: ${Formatters.rupiah(order.totalPrice)}',
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                     Text(
-                      order.needsQuote ? 'Harap kalkulasikan bahan & kirim penawaran segera.' : 'Menunggu persetujuan pelanggan. Penawaran masih dapat diubah.',
+                      order.isCustom
+                          ? (order.needsQuote ? 'Estimasi Biaya Belum Ditentukan' : 'Penawaran Custom: ${Formatters.rupiah(order.totalPrice)}')
+                          : 'Cek Ketersediaan Bahan: ${Formatters.rupiah(order.totalPrice)}',
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                    ),
+                    Text(
+                      order.isCustom
+                          ? (order.needsQuote ? 'Harap kalkulasikan bahan & kirim penawaran segera.' : 'Menunggu persetujuan pelanggan. Penawaran masih dapat diubah.')
+                          : 'Periksa stok kain ke supplier sebelum konfirmasi ketersediaan bahan.',
                       style: const TextStyle(fontSize: 12, color: AppColors.primary),
                     ),
                   ]),
                 ),
               ]),
-              const SizedBox(height: 10),
-              VgButton(
-                label: order.needsQuote ? 'Input Harga Custom' : 'Ubah Harga Custom',
-                style: VgButtonStyle.amber,
-                expanded: true,
-                height: 40,
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InputHargaScreen(orderId: order.id))),
-              ),
+              if (order.isCustom) ...[
+                const SizedBox(height: 10),
+                VgButton(
+                  label: order.needsQuote ? 'Input Harga Custom' : 'Ubah Harga Custom',
+                  style: VgButtonStyle.amber,
+                  expanded: true,
+                  height: 40,
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InputHargaScreen(orderId: order.id))),
+                ),
+              ],
             ]),
           ),
         ],
@@ -740,7 +748,24 @@ class _BottomActions extends StatelessWidget {
                 const SizedBox(height: 10),
                 VgButton(label: 'Tolak / Minta Revisi Desain', icon: Icons.cancel_outlined, style: VgButtonStyle.soft, expanded: true, height: 42, onPressed: () => rejectOrderFlow(context, order)),
               ]
-            : [VgButton(label: 'Konfirmasi Pesanan', icon: Icons.verified_outlined, style: VgButtonStyle.gold, expanded: true, onPressed: () => confirmOrderFlow(context, order))];
+            : [
+                VgButton(
+                  label: 'Konfirmasi Bahan Tersedia',
+                  icon: Icons.verified_outlined,
+                  style: VgButtonStyle.gold,
+                  expanded: true,
+                  onPressed: () => confirmOrderFlow(context, order),
+                ),
+                const SizedBox(height: 10),
+                VgButton(
+                  label: 'Tolak / Bahan Supplier Kosong',
+                  icon: Icons.cancel_outlined,
+                  style: VgButtonStyle.soft,
+                  expanded: true,
+                  height: 42,
+                  onPressed: () => rejectOrderFlow(context, order),
+                ),
+              ];
         break;
       case OrderStatus.dikonfirmasi:
       case OrderStatus.diproses:
