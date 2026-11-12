@@ -36,8 +36,10 @@ class AppColors {
   static const danger = Color(0xFFC62828);
   static const dangerBg = Color(0xFFFDE4E4);
 
-  static const goldGradient = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [goldLight, gold, goldDark]);
-  static const maroonGradient = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF8E0A20), Color(0xFF6A0012), Color(0xFF4A000B)]);
+  /// Warna merah solid (terang dari gradasi maroon sebelumnya: #8E0A20)
+  static const maroonBright = Color(0xFF8E0A20);
+  static const goldGradient = LinearGradient(colors: [gold, gold]);
+  static const maroonGradient = LinearGradient(colors: [maroonBright, maroonBright]);
 
   static const List<BoxShadow> cardShadow = [BoxShadow(color: Color(0x40000000), blurRadius: 14, offset: Offset(0, 4))];
 }

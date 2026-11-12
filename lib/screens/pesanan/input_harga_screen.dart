@@ -343,7 +343,7 @@ class _InputHargaScreenState extends State<InputHargaScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: AppColors.maroonGradient,
+              color: AppColors.maroonBright,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 8))],
             ),

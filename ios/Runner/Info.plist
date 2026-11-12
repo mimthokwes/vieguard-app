@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Vieguard App</string>
+	<string>Vieguard</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>vieguard_app</string>
+	<string>Vieguard</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikasi Vieguard memerlukan akses kamera untuk mengambil foto dokumentasi workshop dan serah terima kostum.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi Vieguard memerlukan akses galeri foto untuk mengunggah desain kostum dan bukti pembayaran.</string>
 </dict>
 </plist>

@@ -154,7 +154,7 @@ class VgButton extends StatelessWidget {
     switch (style) {
       case VgButtonStyle.gold:
         fg = AppColors.onGold;
-        gradient = AppColors.goldGradient;
+        bg = AppColors.gold;
         break;
       case VgButtonStyle.maroon:
         fg = AppColors.onPrimary;
@@ -344,7 +344,7 @@ class VgAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: AppColors.maroonGradient,
+        color: AppColors.maroonBright,
         border: Border.all(color: AppColors.goldLight, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,

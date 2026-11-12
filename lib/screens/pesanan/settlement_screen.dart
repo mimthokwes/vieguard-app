@@ -126,7 +126,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(gradient: AppColors.maroonGradient, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: AppColors.maroonBright, borderRadius: BorderRadius.circular(16)),
                 child: Row(children: [
                   const Expanded(child: Text('SISA TAGIHAN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.goldLight, letterSpacing: 0.6))),
                   Text(Formatters.rupiah(remaining), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white)),
