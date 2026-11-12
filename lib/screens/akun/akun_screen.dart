@@ -152,7 +152,7 @@ class _AkunScreenState extends State<AkunScreen> {
                 Stack(clipBehavior: Clip.none, children: [
                   Container(
                     height: 84,
-                    decoration: const BoxDecoration(gradient: AppColors.maroonGradient),
+                    decoration: const BoxDecoration(color: AppColors.maroonBright),
                     padding: const EdgeInsets.fromLTRB(14, 12, 12, 0),
                     alignment: Alignment.topLeft,
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

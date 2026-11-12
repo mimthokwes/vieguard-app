@@ -118,7 +118,7 @@ class _RefundScreenState extends State<RefundScreen> {
               ],
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(gradient: AppColors.maroonGradient, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: AppColors.maroonBright, borderRadius: BorderRadius.circular(16)),
                 child: Row(children: [
                   const Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

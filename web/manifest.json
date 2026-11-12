@@ -1,6 +1,6 @@
 {
-    "name": "vieguard_app",
-    "short_name": "vieguard_app",
+    "name": "Vieguard",
+    "short_name": "Vieguard",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -166,7 +166,7 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: AppColors.maroonGradient,
+              color: AppColors.maroonBright,
               borderRadius: BorderRadius.circular(18),
               boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))],
             ),

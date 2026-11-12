@@ -4,6 +4,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io_client;
 import '../core/api/api_client.dart';
 import '../core/api/api_config.dart';
 import '../core/api/api_exception.dart';
+import '../core/services/local_notification_service.dart';
 import '../core/storage/token_storage.dart';
 import '../models/conversation_model.dart';
 import '../models/operations_models.dart';
@@ -23,6 +24,7 @@ class ChatProvider extends ChangeNotifier {
   String? errorMessage;
 
   io_client.Socket? _socket;
+  VoidCallback? onNotificationReceived;
 
   List<Conversation> get conversations => List.unmodifiable(_conversations);
   List<ChatMessage> get messages => List.unmodifiable(_messages);
@@ -91,53 +93,92 @@ class ChatProvider extends ChangeNotifier {
       io_client.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({'token': token})
-          .disableAutoConnect()
+          .setExtraHeaders({'Authorization': 'Bearer $token'})
+          .enableAutoConnect()
+          .enableReconnection()
+          .setReconnectionDelay(2000)
+          .setReconnectionAttempts(999)
           .build(),
     );
 
     _socket!.onConnect((_) {
+      debugPrint('[ChatProvider] WebSocket Mobile TERHUBUNG ke ${ApiConfig.origin}/ws/mobile');
       final active = _activeConversationId;
       if (active != null) _socket?.emit('conversation:join', active);
     });
 
-    _socket!.onConnectError((_) {
+    _socket!.onConnectError((err) {
+      debugPrint('[ChatProvider] WebSocket Mobile GAGAL terhubung: $err');
       errorMessage = 'Gagal terhubung ke server chat real-time.';
       notifyListeners();
-      _socket?.dispose();
-      _socket = null;
-      Future.delayed(const Duration(seconds: 10), () async {
-        if (_socket != null || await tokenStorage.readAccessToken() == null) return;
-        await fetchConversations();
-        await _ensureSocketConnected();
-      });
     });
 
     _socket!.on('message:new', (data) {
-      final message = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
-      if (message.conversationId == _activeConversationId && !_messages.any((m) => m.id == message.id)) {
-        _messages.add(message);
-        if (!message.isFromAdmin) apiClient.get('/chat/conversations/${message.conversationId}/messages').ignore();
+      debugPrint('[ChatProvider] Event message:new diterima: $data');
+      try {
+        final message = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
+        if (message.conversationId == _activeConversationId && !_messages.any((m) => m.id == message.id)) {
+          _messages.add(message);
+          if (!message.isFromAdmin) apiClient.get('/chat/conversations/${message.conversationId}/messages').ignore();
+        }
+
+        final convIndex = _conversations.indexWhere((c) => c.id == message.conversationId);
+        String customerName = 'Pelanggan';
+
+        if (convIndex == -1) {
+          fetchConversations();
+        } else {
+          final old = _conversations.removeAt(convIndex);
+          customerName = old.customerName;
+          _conversations.insert(
+            0,
+            Conversation(
+              id: old.id,
+              customerId: old.customerId,
+              customerName: old.customerName,
+              customerPhoto: old.customerPhoto,
+              lastMessageText: message.messageText,
+              lastMessageAt: message.createdAt,
+              unreadCount: message.isFromAdmin ? old.unreadCount : old.unreadCount + 1,
+              lastFromAdmin: message.isFromAdmin,
+            ),
+          );
+        }
+        notifyListeners();
+
+        // Tampilkan push notifikasi ke handphone untuk setiap pesan masuk dari pelanggan
+        if (!message.isFromAdmin) {
+          LocalNotificationService.showChatNotification(
+            customerName: customerName,
+            messageText: message.messageText?.isNotEmpty == true
+                ? message.messageText!
+                : (message.imageAttachment != null ? '📷 Mengirim gambar lampiran' : 'Pesan baru masuk'),
+            conversationId: message.conversationId,
+          );
+        }
+      } catch (e, stack) {
+        debugPrint('[ChatProvider] Error parsing message:new: $e\n$stack');
       }
-      final convIndex = _conversations.indexWhere((c) => c.id == message.conversationId);
-      if (convIndex == -1) {
-        fetchConversations();
-        return;
+    });
+
+    _socket!.on('notification:new', (data) {
+      debugPrint('[ChatProvider] Event notification:new diterima: $data');
+      try {
+        final map = Map<String, dynamic>.from(data as Map);
+        final title = map['title']?.toString() ?? 'Pemberitahuan Baru';
+        final body = map['message']?.toString() ?? '';
+        final orderId = map['relatedOrderId']?.toString();
+
+        LocalNotificationService.showOrderNotification(
+          title: title,
+          message: body,
+          orderId: orderId,
+        );
+
+        onNotificationReceived?.call();
+      } catch (e) {
+        debugPrint('Error socket notification:new: $e');
       }
-      final old = _conversations.removeAt(convIndex);
-      _conversations.insert(
-        0,
-        Conversation(
-          id: old.id,
-          customerId: old.customerId,
-          customerName: old.customerName,
-          customerPhoto: old.customerPhoto,
-          lastMessageText: message.messageText,
-          lastMessageAt: message.createdAt,
-          unreadCount: message.isFromAdmin || message.conversationId == _activeConversationId ? old.unreadCount : old.unreadCount + 1,
-          lastFromAdmin: message.isFromAdmin,
-        ),
-      );
-      notifyListeners();
     });
 
     _socket!.connect();

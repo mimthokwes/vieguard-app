@@ -204,28 +204,14 @@ class _WelcomeBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        gradient: AppColors.maroonGradient,
+        color: AppColors.maroonBright,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Stack(children: [
-        Positioned(
-          right: -50,
-          top: -60,
-          child: Container(
-            width: 190,
-            height: 190,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [Colors.white.withValues(alpha: 0.14), Colors.white.withValues(alpha: 0)]),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.goldLight.withValues(alpha: 0.8))),
@@ -241,7 +227,6 @@ class _WelcomeBanner extends StatelessWidget {
             const Text('Pantau pesanan pembelian & rental kostum hari ini.', style: TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted, height: 1.4)),
           ]),
         ),
-      ]),
     );
   }
 }
@@ -382,8 +367,7 @@ class _KelolaTile extends StatelessWidget {
         height: 104,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          color: highlighted ? null : AppColors.surface,
-          gradient: highlighted ? AppColors.maroonGradient : null,
+          color: highlighted ? AppColors.maroonBright : AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: highlighted ? null : Border.all(color: AppColors.border),
           boxShadow: AppColors.cardShadow,
