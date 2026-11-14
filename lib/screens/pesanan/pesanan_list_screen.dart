@@ -487,6 +487,10 @@ class _OrderCard extends StatelessWidget {
                 ]),
               ),
             ],
+            if (order.orderType == OrderType.beli) ...[
+              const SizedBox(height: 8),
+              _CustomerOrderFileCard(order: order),
+            ],
           ]),
         ),
         const SizedBox(height: 14),
@@ -496,6 +500,98 @@ class _OrderCard extends StatelessWidget {
           ...actions,
         ]),
       ]),
+    );
+  }
+}
+
+class _CustomerOrderFileCard extends StatelessWidget {
+  final Order order;
+  const _CustomerOrderFileCard({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final fileName = order.customerFileName ?? 'Berkas_Ukuran_Pelanggan.xlsx';
+    final isPdf = order.isCustomerFilePdf;
+    final isExcel = order.isCustomerFileExcel || (!isPdf && (fileName.toLowerCase().endsWith('.xlsx') || fileName.toLowerCase().endsWith('.csv')));
+    final fileColor = isExcel ? const Color(0xFF1E7B45) : (isPdf ? const Color(0xFFD32F2F) : AppColors.primary);
+    final fileBg = isExcel ? const Color(0xFFE8F5E9) : (isPdf ? const Color(0xFFFFEBEE) : AppColors.beige);
+    final fileIcon = isExcel
+        ? Icons.table_chart_rounded
+        : (isPdf ? Icons.picture_as_pdf_rounded : Icons.insert_drive_file_rounded);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: fileColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: fileBg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(fileIcon, size: 18, color: fileColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: fileBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        isExcel ? 'EXCEL' : (isPdf ? 'PDF' : 'FILE'),
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: fileColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  order.hasStudentSizes
+                      ? 'Daftar Ukuran: ${order.sizeEntries.length} siswa • Dikirim Pelanggan'
+                      : 'Berkas Ukuran Pre-Order • Dikirim Pelanggan',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+        ],
+      ),
     );
   }
 }

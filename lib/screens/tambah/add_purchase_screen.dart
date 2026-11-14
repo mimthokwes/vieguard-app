@@ -13,7 +13,7 @@ import '../stok/stok_detail_screen.dart';
 // ─── model helper ─────────────────────────────────────────────────────────────
 class _VariantRow {
   final TextEditingController size;
-  int stockBuy = 1;
+  int stockBuy = 0;
   TextEditingController priceOverride = TextEditingController();
   _VariantRow(String s) : size = TextEditingController(text: s);
   void dispose() {
@@ -67,7 +67,9 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
     _sku.dispose();
     _description.dispose();
     _priceBuy.dispose();
-    for (final v in _variants) v.dispose();
+    for (final v in _variants) {
+      v.dispose();
+    }
     super.dispose();
   }
 
@@ -198,7 +200,7 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Halaman ini untuk menambah barang yang akan dijual/dibeli pelanggan. Stok sewa tidak diisi.',
+                  'Halaman ini untuk menambah barang pembelian pelanggan dengan skema Pre-Order (tanpa stok fisik gudang).',
                   style: TextStyle(fontSize: 12.5, color: AppColors.info, height: 1.4),
                 ),
               ),
@@ -285,12 +287,12 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
             ]),
           ),
 
-          // ── Varian & Stok ────────────────────────────────────────────────────
+          // ── Pilihan Ukuran (Pre-Order) ───────────────────────────────────────
           VgCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               VgCardTitle(
-                title: 'Ukuran & Stok Beli',
-                subtitle: 'Jumlah unit fisik siap jual di gudang',
+                title: 'Pilihan Ukuran (Pre-Order)',
+                subtitle: 'Daftar ukuran yang tersedia untuk dipesan (tanpa stok fisik)',
                 trailing: VgPill(label: '${_variants.length} Ukuran', color: AppColors.primary, background: AppColors.beige),
               ),
               for (var i = 0; i < _variants.length; i++)
@@ -318,11 +320,6 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
                             color: _variants.length > 1 ? AppColors.danger : AppColors.border,
                           ),
                         ),
-                      ]),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        const Expanded(child: Text('Stok tersedia', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
-                        VgStepper(value: _variants[i].stockBuy, onChanged: (v) => setState(() => _variants[i].stockBuy = v)),
                       ]),
                       const SizedBox(height: 8),
                       const VgLabel('Harga per ukuran (opsional, timpa harga dasar)'),

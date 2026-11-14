@@ -7,6 +7,7 @@ class Conversation {
   final DateTime? lastMessageAt;
   final int unreadCount;
   final bool lastFromAdmin;
+  final bool isBotActive;
 
   Conversation({
     required this.id,
@@ -17,6 +18,7 @@ class Conversation {
     this.lastMessageAt,
     this.unreadCount = 0,
     this.lastFromAdmin = false,
+    this.isBotActive = true,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class Conversation {
       lastMessageAt: json['lastMessageAt'] != null ? DateTime.tryParse(json['lastMessageAt'].toString()) : null,
       unreadCount: json['unreadCount'] as int? ?? 0,
       lastFromAdmin: lastMessage?['senderType'] == 'admin',
+      isBotActive: json['isBotActive'] is bool ? json['isBotActive'] as bool : true,
     );
   }
 }

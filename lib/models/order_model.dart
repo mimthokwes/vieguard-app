@@ -78,6 +78,44 @@ class Order {
 
   bool get isCustom => orderType == OrderType.custom;
 
+  bool get isBeli => orderType == OrderType.beli;
+
+  String? get customerFileName {
+    final note = customOrderDetail?.consultationNote;
+    if (note != null && note.isNotEmpty) {
+      final match = RegExp(r'(?:rosterFile|Berkas Ukuran):\s*([^\r\n]+)', caseSensitive: false).firstMatch(note);
+      if (match != null) {
+        return match.group(1)?.trim();
+      }
+    }
+    if (notes != null && notes!.isNotEmpty) {
+      final match = RegExp(r'Berkas Ukuran:\s*([^\r\n—]+)', caseSensitive: false).firstMatch(notes!);
+      if (match != null) {
+        return match.group(1)?.trim();
+      }
+    }
+    final ref = customOrderDetail?.designReference;
+    if (ref != null && ref.isNotEmpty) {
+      final lower = ref.toLowerCase();
+      if (lower.endsWith('.xlsx') || lower.endsWith('.csv') || lower.endsWith('.xls') || lower.endsWith('.pdf')) {
+        return ref.split('/').last;
+      }
+    }
+    return null;
+  }
+
+  bool get hasCustomerFile => customerFileName != null;
+
+  bool get isCustomerFilePdf {
+    final fn = (customerFileName ?? '').toLowerCase();
+    return fn.endsWith('.pdf') || (notes?.toLowerCase().contains('(pdf)') ?? false);
+  }
+
+  bool get isCustomerFileExcel {
+    final fn = (customerFileName ?? '').toLowerCase();
+    return fn.endsWith('.xlsx') || fn.endsWith('.xls') || fn.endsWith('.csv') || (notes?.toLowerCase().contains('(excel)') ?? false);
+  }
+
   bool get needsQuote => isCustom && status == OrderStatus.pending && totalPrice <= 0;
 
   String get headline => items.isNotEmpty ? items.first.name : (customOrderDetail?.jenisJenjang ?? 'Pesanan ${orderType.label}');

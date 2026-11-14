@@ -486,6 +486,10 @@ class _RecentOrderCard extends StatelessWidget {
                 order.needsQuote ? 'Belum Ditentukan' : Formatters.rupiah(order.totalPrice),
                 style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.primary),
               ),
+              if (order.orderType == OrderType.beli) ...[
+                const SizedBox(height: 6),
+                _RecentOrderFileBadge(order: order),
+              ],
             ]),
           ),
         ]),
@@ -500,6 +504,48 @@ class _RecentOrderCard extends StatelessWidget {
           onPressed: onTap,
         ),
       ]),
+    );
+  }
+}
+
+class _RecentOrderFileBadge extends StatelessWidget {
+  final Order order;
+  const _RecentOrderFileBadge({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final fileName = order.customerFileName ?? 'Berkas_Ukuran.xlsx';
+    final isPdf = order.isCustomerFilePdf;
+    final fileColor = isPdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45);
+    final fileBg = isPdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9);
+    final icon = isPdf ? Icons.picture_as_pdf_rounded : Icons.table_chart_rounded;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+      decoration: BoxDecoration(
+        color: fileBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: fileColor.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: fileColor),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              'File: $fileName',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: fileColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -270,11 +270,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         const Expanded(child: Text('Stok sewa', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
                         VgStepper(value: _variants[i].stockRent, onChanged: (v) => setState(() => _variants[i].stockRent = v)),
                       ]),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        const Expanded(child: Text('Stok jual', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
-                        VgStepper(value: _variants[i].stockBuy, onChanged: (v) => setState(() => _variants[i].stockBuy = v)),
-                      ]),
                     ]),
                   ),
                 ),

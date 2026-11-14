@@ -530,6 +530,65 @@ class _SizeCard extends StatelessWidget {
                   icon: Icons.check_circle_outline_rounded,
                 ),
         ),
+        if (order.orderType == OrderType.beli) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: (order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45)).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  order.isCustomerFilePdf ? Icons.picture_as_pdf_rounded : Icons.table_chart_rounded,
+                  color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Flexible(
+                      child: Text(
+                        order.customerFileName ?? 'Berkas_Ukuran_Pelanggan.xlsx',
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        order.isCustomerFilePdf ? 'PDF' : 'EXCEL',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
+                        ),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 2),
+                  const Text('Berkas ukuran dikirim pelanggan saat awal pemesanan pre-order', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                ]),
+              ),
+            ]),
+          ),
+        ],
         if (sizes.isEmpty) ...[
           const VgInset(child: Text('Pelanggan belum melampirkan ukuran pada pesanan ini.', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
           const SizedBox(height: 10),
