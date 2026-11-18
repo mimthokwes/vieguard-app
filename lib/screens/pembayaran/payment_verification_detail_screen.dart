@@ -42,16 +42,31 @@ class _PaymentVerificationDetailScreenState extends State<PaymentVerificationDet
 
   Future<void> _verify(bool approve, {String? reason}) async {
     final provider = context.read<PaymentProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     setState(() => _submitting = true);
     final ok = await provider.verifyPayment(widget.paymentId, approve: approve, refundReason: reason);
     if (!mounted) return;
     setState(() => _submitting = false);
-    messenger.showSnackBar(SnackBar(
-      content: Text(ok ? (approve ? 'Pembayaran diverifikasi.' : 'Bukti pembayaran ditolak.') : provider.errorMessage ?? 'Gagal memproses pembayaran.'),
-    ));
-    if (ok) navigator.pop();
+    if (ok) {
+      if (approve) {
+        VgAlert.confirm(
+          context: context,
+          title: 'Pembayaran Diverifikasi',
+          message: 'Bukti transfer disetujui dan status pesanan diperbarui.',
+          confirmLabel: 'Mantap',
+          onConfirm: () {},
+        );
+      } else {
+        VgAlert.info(
+          context: context,
+          title: 'Bukti Ditolak',
+          message: 'Bukti transfer ditolak dan pelanggan diminta mengirim ulang.',
+        );
+      }
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal memproses pembayaran.');
+    }
   }
 
   Future<void> _reject() async {

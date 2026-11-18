@@ -17,6 +17,7 @@ import 'order_actions.dart';
 import 'photo_docs_screen.dart';
 import 'settlement_screen.dart';
 import 'ship_order_screen.dart';
+import 'size_file_helper.dart';
 import 'size_preview_screen.dart';
 import 'size_upload_screen.dart';
 import 'workshop_progress_screen.dart';
@@ -530,7 +531,7 @@ class _SizeCard extends StatelessWidget {
                   icon: Icons.check_circle_outline_rounded,
                 ),
         ),
-        if (order.orderType == OrderType.beli) ...[
+        if (order.orderType == OrderType.beli || order.hasCustomerFile) ...[
           Container(
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 12),
@@ -541,52 +542,66 @@ class _SizeCard extends StatelessWidget {
                 color: (order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45)).withValues(alpha: 0.3),
               ),
             ),
-            child: Row(children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  order.isCustomerFilePdf ? Icons.picture_as_pdf_rounded : Icons.table_chart_rounded,
-                  color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Flexible(
-                      child: Text(
-                        order.customerFileName ?? 'Berkas_Ukuran_Pelanggan.xlsx',
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        order.isCustomerFilePdf ? 'PDF' : 'EXCEL',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
-                          color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
+                    child: Icon(
+                      order.isCustomerFilePdf ? Icons.picture_as_pdf_rounded : Icons.table_chart_rounded,
+                      color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Flexible(
+                          child: Text(
+                            order.customerFileName ?? 'Berkas_Ukuran_Pelanggan.xlsx',
+                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
                         ),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 2),
-                  const Text('Berkas ukuran dikirim pelanggan saat awal pemesanan pre-order', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: order.isCustomerFilePdf ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            order.isCustomerFilePdf ? 'PDF' : 'EXCEL',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: order.isCustomerFilePdf ? const Color(0xFFD32F2F) : const Color(0xFF1E7B45),
+                            ),
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 2),
+                      const Text('Berkas ukuran dikirim pelanggan saat awal pemesanan', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                    ]),
+                  ),
                 ]),
-              ),
-            ]),
+                const SizedBox(height: 10),
+                VgButton(
+                  label: 'Unduh Berkas Ukuran Pelanggan (.xlsx)',
+                  icon: Icons.download_rounded,
+                  style: VgButtonStyle.green,
+                  height: 40,
+                  expanded: true,
+                  onPressed: () => downloadCustomerSizeExcel(context: context, order: order),
+                ),
+              ],
+            ),
           ),
         ],
         if (sizes.isEmpty) ...[
@@ -621,10 +636,62 @@ class _SizeCard extends StatelessWidget {
                 ),
                 Text('${order.sizedQuantity} Stel', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.primary)),
               ]),
+              if (order.hasCustomerFile) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.beigeSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.goldLight, width: 1.2),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E7B45).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.description_rounded, size: 22, color: Color(0xFF1E7B45)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          const VgPill(label: 'Berkas Pelanggan', color: Color(0xFF1E7B45), background: Color(0xFFE8F5E9), fontSize: 9.5),
+                          const Spacer(),
+                          Text('${order.sizeEntries.length} Siswa', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        ]),
+                        const SizedBox(height: 3),
+                        Text(
+                          order.customerFileName ?? 'Berkas Ukuran Siswa',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                        ),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ],
               const SizedBox(height: 12),
+              if (order.hasStudentSizes || order.hasCustomerFile || sizes.isNotEmpty) ...[
+                VgButton(
+                  label: order.hasCustomerFile
+                      ? 'Unduh Berkas Pelanggan (.xlsx)'
+                      : 'Unduh Berkas Ukuran Pelanggan (.xlsx)',
+                  icon: Icons.download_rounded,
+                  style: VgButtonStyle.green,
+                  expanded: true,
+                  height: 44,
+                  onPressed: () => downloadCustomerSizeExcel(context: context, order: order),
+                ),
+                const SizedBox(height: 10),
+              ],
               VgButton(
                 label: 'Kelola Data Ukuran Siswa',
                 icon: Icons.manage_accounts_outlined,
+                style: (order.hasStudentSizes || order.hasCustomerFile || sizes.isNotEmpty) ? VgButtonStyle.outline : VgButtonStyle.maroon,
                 expanded: true,
                 height: 44,
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SizeUploadScreen(orderId: order.id))),
@@ -634,7 +701,7 @@ class _SizeCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: sizeRecapText(order)));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rekap ukuran disalin.')));
+                  VgAlert.info(context: context, message: 'Rekap ukuran disalin.');
                 },
                 icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primary),
                 label: const Text('Salin Rekap Ukuran', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
@@ -927,7 +994,7 @@ class _ShippingCard extends StatelessWidget {
               TapScale(
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: order.trackingNumber!));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nomor resi disalin.')));
+                  VgAlert.info(context: context, message: 'Nomor resi disalin.');
                 },
                 child: const Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.copy_rounded, size: 16, color: AppColors.primary),

@@ -39,33 +39,45 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   Future<void> _confirm(double remaining) async {
     final provider = context.read<OrderProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final amount = _enteredAmount;
     if (amount <= 0 || amount > remaining) {
-      messenger.showSnackBar(SnackBar(content: Text('Nominal harus antara Rp 1 dan ${Formatters.rupiah(remaining)}.')));
+      VgAlert.error(context: context, message: 'Nominal harus antara Rp 1 dan ${Formatters.rupiah(remaining)}.');
       return;
     }
     if (!_received) {
-      messenger.showSnackBar(const SnackBar(content: Text('Centang konfirmasi bahwa dana sudah diterima.')));
+      VgAlert.error(context: context, message: 'Centang konfirmasi bahwa dana sudah diterima.');
       return;
     }
     setState(() => _saving = true);
     final ok = await provider.recordPayment(widget.orderId, paymentType: 'pelunasan', amount: amount, paymentMethod: _method, proof: _proof);
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Pelunasan ${Formatters.rupiah(amount)} tercatat.' : provider.errorMessage ?? 'Gagal mencatat pelunasan.')));
-    if (ok) navigator.pop();
+    if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: 'Pelunasan Diterima',
+        message: 'Pelunasan ${Formatters.rupiah(amount)} tercatat dan status pesanan diperbarui.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal mencatat pelunasan.');
+    }
   }
 
   Future<void> _remind() async {
     final provider = context.read<OrderProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _reminding = true);
     final ok = await provider.remindPayment(widget.orderId);
     if (!mounted) return;
     setState(() => _reminding = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Pengingat pelunasan dikirim ke pelanggan.' : provider.errorMessage ?? 'Gagal mengirim pengingat.')));
+    if (ok) {
+      VgAlert.success(context: context, message: 'Pengingat pelunasan dikirim ke pelanggan.');
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal mengirim pengingat.');
+    }
   }
 
   @override

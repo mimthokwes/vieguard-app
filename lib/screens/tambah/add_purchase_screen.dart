@@ -166,10 +166,16 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
     setState(() => _saving = false);
 
     if (created == null) {
-      messenger.showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Gagal menyimpan produk.')));
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan produk.');
       return;
     }
-    messenger.showSnackBar(const SnackBar(content: Text('Produk beli berhasil ditambahkan.')));
+    VgAlert.confirm(
+      context: context,
+      title: 'Produk Ditambahkan',
+      message: 'Produk beli berhasil ditambahkan ke katalog.',
+      confirmLabel: 'Mantap',
+      onConfirm: () {},
+    );
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => StokDetailScreen(productId: created.id)),

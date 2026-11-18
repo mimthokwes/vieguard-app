@@ -178,10 +178,16 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
     setState(() => _saving = false);
 
     if (created == null) {
-      messenger.showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Gagal menyimpan kostum.')));
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan kostum.');
       return;
     }
-    messenger.showSnackBar(const SnackBar(content: Text('Kostum sewa berhasil ditambahkan.')));
+    VgAlert.confirm(
+      context: context,
+      title: 'Kostum Sewa Ditambahkan',
+      message: 'Kostum sewa baru berhasil ditambahkan dan siap disewakan.',
+      confirmLabel: 'Mantap',
+      onConfirm: () {},
+    );
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => StokDetailScreen(productId: created.id)),

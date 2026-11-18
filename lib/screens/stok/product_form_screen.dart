@@ -156,10 +156,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     if (!mounted) return;
     setState(() => _saving = false);
     if (created == null) {
-      messenger.showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Gagal menyimpan kostum.')));
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan kostum.');
       return;
     }
-    messenger.showSnackBar(const SnackBar(content: Text('Kostum baru tersimpan dan siap disewakan.')));
+    VgAlert.confirm(
+      context: context,
+      title: 'Kostum Tersimpan',
+      message: 'Kostum baru tersimpan dan siap disewakan.',
+      confirmLabel: 'Mantap',
+      onConfirm: () {},
+    );
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => StokDetailScreen(productId: created.id)));
   }
 

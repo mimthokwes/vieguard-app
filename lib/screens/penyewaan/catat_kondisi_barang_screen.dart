@@ -121,8 +121,14 @@ class _CatatKondisiBarangScreenState extends State<CatatKondisiBarangScreen> {
     );
     if (!mounted) return;
     setState(() => _submitting = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Pengembalian barang dikonfirmasi.' : provider.errorMessage ?? 'Gagal menyimpan pengembalian.')));
     if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: 'Pengembalian Dikonfirmasi',
+        message: 'Pengembalian barang kostum berhasil dikonfirmasi.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_draftKey);
       if ((order.rental!.depositAmount ?? 0) > 0) {
@@ -130,6 +136,8 @@ class _CatatKondisiBarangScreenState extends State<CatatKondisiBarangScreen> {
       } else {
         navigator.pop();
       }
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan pengembalian.');
     }
   }
 

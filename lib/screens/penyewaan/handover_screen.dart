@@ -99,8 +99,18 @@ class _HandoverScreenState extends State<HandoverScreen> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Kostum diserahkan ke ${order.customer.name}.' : rentals.errorMessage ?? 'Gagal menyimpan serah terima.')));
-    if (ok) navigator.pop();
+    if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: 'Serah Terima Selesai',
+        message: 'Kostum berhasil diserahkan ke ${order.customer.name}.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: rentals.errorMessage ?? 'Gagal menyimpan serah terima.');
+    }
   }
 
   @override

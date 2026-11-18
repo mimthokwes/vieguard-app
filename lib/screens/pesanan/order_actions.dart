@@ -41,14 +41,30 @@ Future<void> confirmOrderFlow(BuildContext context, Order order) async {
   );
   if (ok != true) return;
   final success = await provider.confirmOrder(order.id, dpAmount: double.tryParse(controller.text.replaceAll('.', '')));
-  messenger.showSnackBar(SnackBar(content: Text(success ? 'Pesanan dikonfirmasi.' : provider.errorMessage ?? 'Gagal konfirmasi.')));
+  if (success) {
+    VgAlert.confirm(
+      context: context,
+      title: 'Pesanan Dikonfirmasi',
+      message: 'Pesanan #${order.orderNumber} telah dikonfirmasi dan pelanggan diberi tahu.',
+      confirmLabel: 'Mantap',
+      onConfirm: () {},
+    );
+  } else {
+    VgAlert.error(
+      context: context,
+      message: provider.errorMessage ?? 'Gagal konfirmasi.',
+    );
+  }
 }
 
 Future<void> changeStatusFlow(BuildContext context, Order order, OrderStatus status, String successLabel, {String? note}) async {
   final provider = context.read<OrderProvider>();
-  final messenger = ScaffoldMessenger.of(context);
   final ok = await provider.changeStatus(order.id, status, note: note);
-  messenger.showSnackBar(SnackBar(content: Text(ok ? successLabel : provider.errorMessage ?? 'Gagal memperbarui status.')));
+  if (ok) {
+    VgAlert.success(context: context, message: successLabel);
+  } else {
+    VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal memperbarui status.');
+  }
 }
 
 Future<void> rejectOrderFlow(BuildContext context, Order order) async {

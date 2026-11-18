@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../common/vg_alert.dart';
+export '../common/vg_alert.dart';
+
 import '../../core/storage/image_cache_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/order_model.dart';
@@ -589,12 +592,11 @@ class VgBackBar extends StatelessWidget implements PreferredSizeWidget {
 
 Future<void> openChatWithCustomer(BuildContext context, Order order) async {
   final chat = context.read<ChatProvider>();
-  final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
   if (chat.conversations.isEmpty) await chat.fetchConversations();
   final matches = chat.conversations.where((c) => c.customerId == order.customer.id);
   if (matches.isEmpty) {
-    messenger.showSnackBar(const SnackBar(content: Text('Belum ada percakapan dengan pelanggan ini.')));
+    VgAlert.info(context: context, message: 'Belum ada percakapan dengan pelanggan ini.');
     return;
   }
   navigator.push(MaterialPageRoute(builder: (_) => ChatDetailScreen(conversation: matches.first)));

@@ -6,8 +6,8 @@ import '../../core/theme/app_theme.dart';
 import '../../state/chat_provider.dart';
 import '../../state/notification_provider.dart';
 import '../../state/order_provider.dart';
-import '../../widgets/common/tap_scale.dart';
 import '../../widgets/dialogs/permission_dialog.dart';
+import '../../widgets/navigation/floating_notch_nav_bar.dart';
 import '../laporan/laporan_screen.dart';
 import '../beranda/beranda_screen.dart';
 import '../chat/chat_list_screen.dart';
@@ -64,13 +64,14 @@ class _MainShellState extends State<MainShell> {
       }
     };
 
-    Future.microtask(() async {
-      await _chat.fetchConversations();
-      await _chat.connectRealtime();
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PermissionDialog.showIfNeeded(context);
+      // Tunda network socket chat sejenak agar frame pertama & transisi halaman berjalan mulus
+      Future.delayed(const Duration(milliseconds: 450), () async {
+        if (!mounted) return;
+        await _chat.fetchConversations();
+        await _chat.connectRealtime();
+      });
     });
   }
 
@@ -91,18 +92,11 @@ class _MainShellState extends State<MainShell> {
     // AkunScreen(),
   ];
 
-  static const _items = [
-    (Icons.window_outlined, 'Beranda'),
-    (Icons.receipt_long_rounded, 'Beli'),
-    (Icons.handshake_outlined, 'Sewa'),
-    (Icons.chat_bubble_outline_rounded, 'Chat'),
-    (Icons.trending_up_rounded, 'Laporan'),
-    // (Icons.window_outlined,'Akun')
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final unreadChats = context.watch<ChatProvider>().conversations.fold<int>(0, (s, c) => s + c.unreadCount);
+    final unreadChats = context.select<ChatProvider, int>(
+      (chat) => chat.conversations.fold<int>(0, (s, c) => s + c.unreadCount),
+    );
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
@@ -114,73 +108,23 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        child: Container(
-          height: 68,
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.goldLight, width: 1.2),
-            boxShadow: [BoxShadow(color: const Color(0xFF7A4A20).withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, 6))],
-          ),
-          child: Row(
-            children: List.generate(_items.length, (i) {
-              final selected = i == _index;
-              final (icon, label) = _items[i];
-              return Expanded(
-                child: TapScale(
-                  onTap: () => setState(() {
-                    _index = i;
-                    _loadedIndices.add(i);
-                  }),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: selected ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(18)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Badge(
-                          isLabelVisible: label == 'Chat' && unreadChats > 0,
-                          label: Text('${unreadChats > 99 ? '99+' : unreadChats}'),
-                          backgroundColor: AppColors.danger,
-                          child: Icon(icon, size: selected ? 22 : 24, color: selected ? AppColors.goldLight : AppColors.primary),
-                        ),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          alignment: Alignment.center,
-                          child: selected
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 3),
-                                  child: Center(
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        label,
-                                        maxLines: 1,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.onPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
+        child: FloatingNotchNavBar(
+          currentIndex: _index,
+          onTap: (i) => setState(() {
+            _index = i;
+            _loadedIndices.add(i);
+          }),
+          items: [
+            const FloatingNotchItem(icon: Icons.window_outlined, label: 'Beranda'),
+            const FloatingNotchItem(icon: Icons.receipt_long_rounded, label: 'Beli'),
+            const FloatingNotchItem(icon: Icons.handshake_outlined, label: 'Sewa'),
+            FloatingNotchItem(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Chat',
+              badgeCount: unreadChats,
+            ),
+            const FloatingNotchItem(icon: Icons.trending_up_rounded, label: 'Laporan'),
+          ],
         ),
       ),
     );

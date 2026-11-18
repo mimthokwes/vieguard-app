@@ -33,7 +33,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => _refresh(force: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Berikan jeda 350ms agar animasi transisi masuk halaman selesai mulus 60fps
+      // sebelum menjalankan 5 request API paralel di background.
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) _refresh(force: false);
+      });
+    });
   }
 
   Future<void> _refresh({bool force = false}) async {

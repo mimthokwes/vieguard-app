@@ -19,6 +19,7 @@ import 'state/product_provider.dart';
 import 'state/rental_provider.dart';
 import 'state/report_provider.dart';
 import 'widgets/auth/auth_widgets.dart';
+import 'widgets/common/vg_alert.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class VieguardApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)..initFromCache()),
       ],
       child: MaterialApp(
+        navigatorKey: VgAlert.navigatorKey,
         title: 'VIEGUARD',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
