@@ -32,8 +32,12 @@ jobs:
           cache: true
 
       - name: Siapkan Berkas Lingkungan (.env)
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          if [ ! -f .env ]; then
+          if [ -n "$ENV_FILE" ]; then
+            echo "$ENV_FILE" > .env
+          elif [ ! -f .env ]; then
             if [ -f .env.example ]; then
               cp .env.example .env
             else
@@ -106,8 +110,12 @@ jobs:
           cache: true
 
       - name: Siapkan Berkas Lingkungan (.env)
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          if [ ! -f .env ]; then
+          if [ -n "$ENV_FILE" ]; then
+            echo "$ENV_FILE" > .env
+          elif [ ! -f .env ]; then
             if [ -f .env.example ]; then
               cp .env.example .env
             else
