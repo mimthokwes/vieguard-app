@@ -73,8 +73,9 @@ jobs:
         run: |
           mkdir -p ~/.android
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
-            echo "Android debug keystore berhasil disinkronkan."
+            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > ~/.android/debug.keystore
+            echo "Android debug keystore berhasil disinkronkan:"
+            ls -lh ~/.android/debug.keystore
           fi
 
       - name: Ambil Dependensi Flutter

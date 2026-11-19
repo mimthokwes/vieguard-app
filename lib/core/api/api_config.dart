@@ -17,7 +17,7 @@ class ApiConfig {
 
   static String get appVersion {
     final v = dotenv.maybeGet('APP_VERSION')?.trim();
-    if (v == null || v.isEmpty) return 'v1.2.1';
+    if (v == null || v.isEmpty) return 'v1.2.3';
     return v.startsWith('v') || v.startsWith('V') ? v : 'v$v';
   }
 }
