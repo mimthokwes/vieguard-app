@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/fcm_service.dart';
 import '../../core/services/local_notification_service.dart';
-import '../../core/theme/app_theme.dart';
 import '../../state/chat_provider.dart';
 import '../../state/notification_provider.dart';
 import '../../state/order_provider.dart';
@@ -23,7 +23,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _index = 0;
   final Set<int> _loadedIndices = {0};
   late final ChatProvider _chat;
@@ -31,6 +31,7 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _chat = context.read<ChatProvider>();
 
     _chat.onNotificationReceived = () {
@@ -66,6 +67,8 @@ class _MainShellState extends State<MainShell> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PermissionDialog.showIfNeeded(context);
+      // Sinkronkan token FCM ke backend untuk notifikasi saat app tidak berjalan
+      FcmService.syncTokenWithBackend(_chat.apiClient);
       // Tunda network socket chat sejenak agar frame pertama & transisi halaman berjalan mulus
       Future.delayed(const Duration(milliseconds: 450), () async {
         if (!mounted) return;
@@ -76,7 +79,21 @@ class _MainShellState extends State<MainShell> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Saat aplikasi kembali ke layar depan dari mode siaga atau switch aplikasi:
+      // Pastikan socket WebSocket tersambung kembali dan mutakhirkan data
+      _chat.connectRealtime(force: true);
+      _chat.fetchConversations();
+      if (mounted) {
+        context.read<NotificationProvider>().fetchNotifications(force: true);
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _chat.onNotificationReceived = null;
     LocalNotificationService.onNotificationTapped = null;
     _chat.disconnectRealtime();
