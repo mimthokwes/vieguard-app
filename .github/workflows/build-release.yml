@@ -45,14 +45,6 @@ jobs:
             fi
           fi
 
-      - name: Siapkan Google Services JSON
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-          fi
-
       - name: Ekstraksi Versi Aplikasi
         id: version_step
         run: |
@@ -66,6 +58,24 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
           echo "Versi Android: $VERSION_NAME+$BUILD_NUM"
+
+      - name: Siapkan Google Services JSON
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          fi
+
+      - name: Siapkan Android Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+            echo "Android debug keystore berhasil disinkronkan."
+          fi
 
       - name: Ambil Dependensi Flutter
         run: flutter pub get
@@ -121,14 +131,6 @@ jobs:
             else
               touch .env
             fi
-          fi
-
-      - name: Siapkan Google Services JSON
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
       - name: Ekstraksi Versi Aplikasi
