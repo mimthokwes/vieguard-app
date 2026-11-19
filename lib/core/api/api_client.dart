@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../storage/token_storage.dart';
@@ -56,6 +57,43 @@ class ApiClient {
       return newAccess;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Memperbarui access token secara eksplisit melalui refresh token
+  Future<String?> refreshToken() => _tryRefreshToken();
+
+  /// Mengembalikan token yang valid, jika sudah kedaluwarsa akan otomatis diperbarui
+  Future<String?> getValidAccessToken() async {
+    var token = await tokenStorage.readAccessToken();
+    if (token == null || isTokenExpired(token)) {
+      final refreshed = await _tryRefreshToken();
+      if (refreshed != null) {
+        token = refreshed;
+      }
+    }
+    return token;
+  }
+
+  /// Mengecek apakah access token sudah kedaluwarsa berdasarkan exp di payload JWT
+  static bool isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = jsonDecode(decoded);
+      if (payloadMap is Map && payloadMap.containsKey('exp')) {
+        final exp = payloadMap['exp'];
+        if (exp is int) {
+          final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+          return DateTime.now().isAfter(expiryDate.subtract(const Duration(minutes: 1)));
+        }
+      }
+      return false;
+    } catch (_) {
+      return true;
     }
   }
 

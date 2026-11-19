@@ -44,10 +44,9 @@ class _ShipOrderScreenState extends State<ShipOrderScreen> {
 
   Future<void> _submit() async {
     final provider = context.read<OrderProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     if (!_pickup && _resi.text.trim().isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Isi nomor resi dari ekspedisi terlebih dahulu.')));
+      VgAlert.error(context: context, message: 'Isi nomor resi dari ekspedisi terlebih dahulu.');
       return;
     }
     setState(() => _saving = true);
@@ -63,8 +62,18 @@ class _ShipOrderScreenState extends State<ShipOrderScreen> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? (_pickup ? 'Pelanggan diberi tahu pesanan siap diambil.' : 'Resi terkirim ke pelanggan.') : provider.errorMessage ?? 'Gagal menyimpan pengiriman.')));
-    if (ok) navigator.pop();
+    if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: _pickup ? 'Siap Diambil' : 'Resi Dikirim',
+        message: _pickup ? 'Pelanggan telah diberi tahu pesanan siap diambil di workshop.' : 'Nomor resi ${_resi.text.trim()} berhasil dikirim ke pelanggan.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan pengiriman.');
+    }
   }
 
   @override

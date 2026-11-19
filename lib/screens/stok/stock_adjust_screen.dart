@@ -66,8 +66,18 @@ class _StockAdjustScreenState extends State<StockAdjustScreen> {
     ]);
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Stok berhasil diperbarui.' : provider.errorMessage ?? 'Gagal menyimpan stok.')));
-    if (ok) navigator.pop();
+    if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: 'Stok Diperbarui',
+        message: 'Perubahan stok unit ${product.name} telah disimpan ke database.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal menyimpan stok.');
+    }
   }
 
   @override

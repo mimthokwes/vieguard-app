@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,6 +31,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _scrollCtrl = ScrollController();
   late final ChatProvider _chat;
   int _lastCount = 0;
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
@@ -41,10 +43,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final orders = context.read<OrderProvider>();
       if (orders.orders.isEmpty) orders.fetchOrders();
     });
+
+    // Fallback sync otomatis setiap 6 detik untuk menjamin sinkronisasi pesan jika koneksi seluler sempat terputus
+    _fallbackTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted) return;
+      _chat.syncActiveConversation();
+    });
   }
 
   @override
   void dispose() {
+    _fallbackTimer?.cancel();
     _chat.leaveConversation();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
@@ -102,7 +111,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: VgBackBar(title: widget.conversation.customerName),
+      appBar: VgBackBar(
+        title: widget.conversation.customerName,
+        actions: [
+          IconButton(
+            tooltip: 'Segarkan Pesan',
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary, size: 22),
+            onPressed: () => _chat.syncActiveConversation(),
+          ),
+        ],
+      ),
       body: Column(children: [
         if (order != null) _OrderContextCard(order: order),
         Expanded(
@@ -128,9 +146,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                   ],
                 )
-              : messages.isEmpty
-                  ? const Center(child: Text('Belum ada pesan. Mulai percakapan dengan pelanggan.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)))
-                  : ListView(controller: _scrollCtrl, padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), children: items),
+              : RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async => _chat.syncActiveConversation(),
+                  child: messages.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 120),
+                            Center(child: Text('Belum ada pesan. Mulai percakapan dengan pelanggan.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5))),
+                          ],
+                        )
+                      : ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          children: items,
+                        ),
+                ),
         ),
         Container(
           color: AppColors.background,

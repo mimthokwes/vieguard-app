@@ -29,6 +29,8 @@ class ChatProvider extends ChangeNotifier {
   List<Conversation> get conversations => List.unmodifiable(_conversations);
   List<ChatMessage> get messages => List.unmodifiable(_messages);
 
+  bool get isConnected => _socket?.connected ?? false;
+
   Future<void> fetchConversations() async {
     isLoadingList = true;
     errorMessage = null;
@@ -62,7 +64,9 @@ class ChatProvider extends ChangeNotifier {
           customerPhoto: old.customerPhoto,
           lastMessageText: old.lastMessageText,
           lastMessageAt: old.lastMessageAt,
+          unreadCount: 0,
           lastFromAdmin: old.lastFromAdmin,
+          isBotActive: old.isBotActive,
         );
       }
     } on ApiException catch (e) {
@@ -75,113 +79,166 @@ class ChatProvider extends ChangeNotifier {
     _socket?.emit('conversation:join', conversationId);
   }
 
-  Future<void> connectRealtime() => _ensureSocketConnected();
+  /// Sinkronisasi pesan aktif secara senyap (tanpa menampilkan skeleton loading)
+  Future<void> syncActiveConversation() async {
+    final activeId = _activeConversationId;
+    if (activeId == null) return;
+    try {
+      final data = await apiClient.get('/chat/conversations/$activeId/messages');
+      final newMessages = (data as List<dynamic>).map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
+      _messages = newMessages;
+      notifyListeners();
+    } catch (_) {
+      // Abaikan error saat sinkronisasi senyap
+    }
+  }
+
+  Future<void> connectRealtime({bool force = false}) => _ensureSocketConnected(force: force);
 
   void disconnectRealtime() {
     _socket?.dispose();
     _socket = null;
   }
 
-  Future<void> _ensureSocketConnected() async {
-    if (_socket != null && _socket!.connected) return;
-    final token = await tokenStorage.readAccessToken();
-    if (token == null) return;
+  bool _isConnecting = false;
 
-    _socket?.dispose();
-    _socket = io_client.io(
-      '${ApiConfig.origin}/ws/mobile',
-      io_client.OptionBuilder()
-          .setTransports(['websocket'])
-          .setAuth({'token': token})
-          .setExtraHeaders({'Authorization': 'Bearer $token'})
-          .enableAutoConnect()
-          .enableReconnection()
-          .setReconnectionDelay(2000)
-          .setReconnectionAttempts(999)
-          .build(),
-    );
+  Future<void> _ensureSocketConnected({bool force = false}) async {
+    if (!force && _socket != null && _socket!.connected) return;
+    if (_isConnecting && !force) return;
+    _isConnecting = true;
 
-    _socket!.onConnect((_) {
-      debugPrint('[ChatProvider] WebSocket Mobile TERHUBUNG ke ${ApiConfig.origin}/ws/mobile');
-      final active = _activeConversationId;
-      if (active != null) _socket?.emit('conversation:join', active);
-    });
+    try {
+      // Selalu gunakan access token valid (otomatis me-refresh jika sudah expired)
+      final token = await apiClient.getValidAccessToken();
+      if (token == null) {
+        _isConnecting = false;
+        return;
+      }
 
-    _socket!.onConnectError((err) {
-      debugPrint('[ChatProvider] WebSocket Mobile GAGAL terhubung: $err');
-      errorMessage = 'Gagal terhubung ke server chat real-time.';
-      notifyListeners();
-    });
+      _socket?.dispose();
+      _socket = io_client.io(
+        '${ApiConfig.origin}/ws/mobile',
+        io_client.OptionBuilder()
+            .setTransports(['websocket'])
+            .setAuth({'token': token})
+            .setExtraHeaders({'Authorization': 'Bearer $token'})
+            .enableAutoConnect()
+            .enableReconnection()
+            .setReconnectionDelay(1500)
+            .setReconnectionAttempts(999)
+            .build(),
+      );
 
-    _socket!.on('message:new', (data) {
-      debugPrint('[ChatProvider] Event message:new diterima: $data');
-      try {
-        final message = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
-        if (message.conversationId == _activeConversationId && !_messages.any((m) => m.id == message.id)) {
-          _messages.add(message);
-          if (!message.isFromAdmin) apiClient.get('/chat/conversations/${message.conversationId}/messages').ignore();
-        }
-
-        final convIndex = _conversations.indexWhere((c) => c.id == message.conversationId);
-        String customerName = 'Pelanggan';
-
-        if (convIndex == -1) {
-          fetchConversations();
-        } else {
-          final old = _conversations.removeAt(convIndex);
-          customerName = old.customerName;
-          _conversations.insert(
-            0,
-            Conversation(
-              id: old.id,
-              customerId: old.customerId,
-              customerName: old.customerName,
-              customerPhoto: old.customerPhoto,
-              lastMessageText: message.messageText,
-              lastMessageAt: message.createdAt,
-              unreadCount: message.isFromAdmin ? old.unreadCount : old.unreadCount + 1,
-              lastFromAdmin: message.isFromAdmin,
-            ),
-          );
+      _socket!.onConnect((_) {
+        debugPrint('[ChatProvider] WebSocket Mobile TERHUBUNG ke ${ApiConfig.origin}/ws/mobile');
+        errorMessage = null;
+        final active = _activeConversationId;
+        if (active != null) {
+          _socket?.emit('conversation:join', active);
+          syncActiveConversation();
         }
         notifyListeners();
+      });
 
-        // Tampilkan push notifikasi ke handphone untuk setiap pesan masuk dari pelanggan
-        if (!message.isFromAdmin) {
-          LocalNotificationService.showChatNotification(
-            customerName: customerName,
-            messageText: message.messageText?.isNotEmpty == true
-                ? message.messageText!
-                : (message.imageAttachment != null ? '📷 Mengirim gambar lampiran' : 'Pesan baru masuk'),
-            conversationId: message.conversationId,
-          );
+      _socket!.onDisconnect((reason) {
+        debugPrint('[ChatProvider] WebSocket Mobile terputus: $reason');
+        notifyListeners();
+      });
+
+      _socket!.onConnectError((err) async {
+        debugPrint('[ChatProvider] WebSocket Mobile GAGAL terhubung: $err');
+        final errStr = err.toString().toLowerCase();
+        if (errStr.contains('auth') || errStr.contains('token') || errStr.contains('jwt')) {
+          // Token bermasalah / expired, coba perbarui token dan sambungkan ulang
+          final newToken = await apiClient.refreshToken();
+          if (newToken != null && _socket != null) {
+            _ensureSocketConnected(force: true);
+            return;
+          }
         }
-      } catch (e, stack) {
-        debugPrint('[ChatProvider] Error parsing message:new: $e\n$stack');
-      }
-    });
+        errorMessage = 'Gagal terhubung ke server chat real-time.';
+        notifyListeners();
+      });
 
-    _socket!.on('notification:new', (data) {
-      debugPrint('[ChatProvider] Event notification:new diterima: $data');
-      try {
-        final map = Map<String, dynamic>.from(data as Map);
-        final title = map['title']?.toString() ?? 'Pemberitahuan Baru';
-        final body = map['message']?.toString() ?? '';
-        final orderId = map['relatedOrderId']?.toString();
+      _socket!.on('message:new', (data) {
+        debugPrint('[ChatProvider] Event message:new diterima: $data');
+        try {
+          final message = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
+          final isActiveChat = message.conversationId == _activeConversationId;
 
-        LocalNotificationService.showOrderNotification(
-          title: title,
-          message: body,
-          orderId: orderId,
-        );
+          if (isActiveChat) {
+            if (!_messages.any((m) => m.id == message.id)) {
+              _messages.add(message);
+            }
+            if (!message.isFromAdmin) {
+              apiClient.get('/chat/conversations/${message.conversationId}/messages').ignore();
+            }
+          }
 
-        onNotificationReceived?.call();
-      } catch (e) {
-        debugPrint('Error socket notification:new: $e');
-      }
-    });
+          final convIndex = _conversations.indexWhere((c) => c.id == message.conversationId);
+          String customerName = 'Pelanggan';
 
-    _socket!.connect();
+          if (convIndex == -1) {
+            fetchConversations();
+          } else {
+            final old = _conversations.removeAt(convIndex);
+            customerName = old.customerName;
+            _conversations.insert(
+              0,
+              Conversation(
+                id: old.id,
+                customerId: old.customerId,
+                customerName: old.customerName,
+                customerPhoto: old.customerPhoto,
+                lastMessageText: message.messageText,
+                lastMessageAt: message.createdAt,
+                unreadCount: isActiveChat || message.isFromAdmin ? old.unreadCount : old.unreadCount + 1,
+                lastFromAdmin: message.isFromAdmin,
+                isBotActive: old.isBotActive,
+              ),
+            );
+          }
+          notifyListeners();
+
+          // Tampilkan notifikasi jika pesan berasal dari pelanggan dan pengguna tidak sedang di layar percakapan tersebut
+          if (!message.isFromAdmin && !isActiveChat) {
+            LocalNotificationService.showChatNotification(
+              customerName: customerName,
+              messageText: message.messageText?.isNotEmpty == true
+                  ? message.messageText!
+                  : (message.imageAttachment != null ? 'Mengirim gambar lampiran' : 'Pesan baru masuk'),
+              conversationId: message.conversationId,
+            );
+          }
+        } catch (e, stack) {
+          debugPrint('[ChatProvider] Error parsing message:new: $e\n$stack');
+        }
+      });
+
+      _socket!.on('notification:new', (data) {
+        debugPrint('[ChatProvider] Event notification:new diterima: $data');
+        try {
+          final map = Map<String, dynamic>.from(data as Map);
+          final title = map['title']?.toString() ?? 'Pemberitahuan Baru';
+          final body = map['message']?.toString() ?? '';
+          final orderId = map['relatedOrderId']?.toString();
+
+          LocalNotificationService.showOrderNotification(
+            title: title,
+            message: body,
+            orderId: orderId,
+          );
+
+          onNotificationReceived?.call();
+        } catch (e) {
+          debugPrint('Error socket notification:new: $e');
+        }
+      });
+
+      _socket!.connect();
+    } finally {
+      _isConnecting = false;
+    }
   }
 
   Future<void> sendMessage(String conversationId, String text) async {

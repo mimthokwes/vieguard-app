@@ -16,8 +16,21 @@ import '../../widgets/common/tap_scale.dart';
 import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_form.dart';
 import '../../widgets/vg/vg_ui.dart';
+import 'size_file_helper.dart';
 
-const _templateHeader = ['Nama', 'L/P', 'Tinggi Badan (cm)', 'Ukuran', 'Peran'];
+const _templateHeader = [
+  'Nama',
+  'L/P',
+  'Tinggi Badan (cm)',
+  'Ukuran',
+  'Peran',
+  'Lingkar Dada (cm)',
+  'Lingkar Pinggang (cm)',
+  'Lebar Bahu (cm)',
+  'Panjang Lengan (cm)',
+  'Panjang Celana/Rok (cm)',
+  'Lingkar Kepala Shako (cm)',
+];
 const _sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const _maxHeight = {'XS': 150, 'S': 158, 'M': 166, 'L': 173};
 
@@ -101,8 +114,16 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     final gender = _col(header, ['l/p', 'jenis kelamin', 'gender']);
     final height = _col(header, ['tinggi', 'tb']);
     final role = _col(header, ['peran', 'posisi', 'role']);
+    final chest = _col(header, ['dada', 'chest', 'badan', 'ld']);
+    final waist = _col(header, ['pinggang', 'waist', 'lp']);
+    final shoulder = _col(header, ['bahu', 'shoulder', 'lb']);
+    final arm = _col(header, ['lengan', 'arm', 'pl']);
+    final pants = _col(header, ['celana', 'rok', 'pants', 'pc']);
+    final head = _col(header, ['kepala', 'shako', 'head', 'lk']);
 
     String cell(List<String> r, int? i) => i != null && i < r.length ? r[i] : '';
+    int? parseNum(String s) => int.tryParse(s.replaceAll(RegExp(r'[^0-9]'), ''));
+
     final parsed = <SizeEntry>[];
     final skipped = <String>[];
     for (var i = 1; i < rows.length; i++) {
@@ -117,9 +138,15 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
       parsed.add(SizeEntry(
         studentName: student,
         gender: _gender(g),
-        heightCm: int.tryParse(cell(r, height).replaceAll(RegExp(r'[^0-9]'), '')),
+        heightCm: parseNum(cell(r, height)),
         size: s,
         role: cell(r, role).isEmpty ? null : cell(r, role),
+        chestCm: parseNum(cell(r, chest)),
+        waistCm: parseNum(cell(r, waist)),
+        shoulderCm: parseNum(cell(r, shoulder)),
+        armCm: parseNum(cell(r, arm)),
+        pantsCm: parseNum(cell(r, pants)),
+        headCm: parseNum(cell(r, head)),
       ));
     }
     setState(() {
@@ -139,11 +166,23 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     final book = xl.Excel.createExcel();
     final sheet = book[book.getDefaultSheet()!];
     sheet.appendRow(_templateHeader.map((h) => xl.TextCellValue(h)).toList());
-    sheet.appendRow([xl.TextCellValue('Ahmad Fadhil'), xl.TextCellValue('L'), xl.IntCellValue(164), xl.TextCellValue('M'), xl.TextCellValue('Pasukan')]);
+    sheet.appendRow([
+      xl.TextCellValue('Ahmad Fadhil'),
+      xl.TextCellValue('L'),
+      xl.IntCellValue(164),
+      xl.TextCellValue('M'),
+      xl.TextCellValue('Snare Drum'),
+      xl.IntCellValue(86),
+      xl.IntCellValue(74),
+      xl.IntCellValue(42),
+      xl.IntCellValue(58),
+      xl.IntCellValue(98),
+      xl.IntCellValue(56),
+    ]);
     final bytes = book.encode();
     if (bytes == null) return;
     final dir = await getApplicationDocumentsDirectory();
-    final path = '${dir.path}/template_ukuran_vieguard.xlsx';
+    final path = '${dir.path}/template_ukuran_seragam_vieguard.xlsx';
     await File(path).writeAsBytes(bytes);
     await OpenFilex.open(path);
   }
@@ -152,7 +191,13 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     final existing = index != null ? _entries![index] : null;
     final nameCtrl = TextEditingController(text: existing?.studentName);
     final heightCtrl = TextEditingController(text: existing?.heightCm?.toString());
-    final roleCtrl = TextEditingController(text: existing?.role);
+    final roleCtrl = TextEditingController(text: existing?.cleanRole != '-' ? existing?.cleanRole : '');
+    final chestCtrl = TextEditingController(text: existing?.chestCm?.toString());
+    final waistCtrl = TextEditingController(text: existing?.waistCm?.toString());
+    final shoulderCtrl = TextEditingController(text: existing?.shoulderCm?.toString());
+    final armCtrl = TextEditingController(text: existing?.armCm?.toString());
+    final pantsCtrl = TextEditingController(text: existing?.pantsCm?.toString());
+    final headCtrl = TextEditingController(text: existing?.headCm?.toString());
     var size = existing?.size ?? 'M';
     var gender = existing?.gender ?? 'L';
     final saved = await showModalBottomSheet<SizeEntry>(
@@ -163,42 +208,72 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
           padding: EdgeInsets.fromLTRB(16, 18, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(existing == null ? 'Tambah Siswa' : 'Ubah Data Siswa', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary)),
-            const SizedBox(height: 12),
-            const VgLabel('Nama Siswa'),
-            VgTextField(controller: nameCtrl, hint: 'Nama lengkap'),
-            const SizedBox(height: 10),
-            const VgLabel('Jenis Kelamin'),
-            VgChoiceChips<String>(options: const [('L', 'Pria'), ('P', 'Wanita')], selected: gender, onSelected: (v) => setSheet(() => gender = v)),
-            const SizedBox(height: 10),
-            const VgLabel('Ukuran'),
-            VgChoiceChips<String>(options: [for (final s in _sizeOrder) (s, s)], selected: size, onSelected: (v) => setSheet(() => size = v)),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: VgTextField(controller: heightCtrl, hint: 'Tinggi', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
-              const SizedBox(width: 10),
-              Expanded(child: VgTextField(controller: roleCtrl, hint: 'Peran (mis. Snare)')),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(existing == null ? 'Tambah Siswa' : 'Ubah Data Siswa', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary)),
+              const SizedBox(height: 12),
+              const VgLabel('Nama Siswa'),
+              VgTextField(controller: nameCtrl, hint: 'Nama lengkap'),
+              const SizedBox(height: 10),
+              const VgLabel('Jenis Kelamin'),
+              VgChoiceChips<String>(options: const [('L', 'Pria'), ('P', 'Wanita')], selected: gender, onSelected: (v) => setSheet(() => gender = v)),
+              const SizedBox(height: 10),
+              const VgLabel('Ukuran'),
+              VgChoiceChips<String>(options: [for (final s in _sizeOrder) (s, s)], selected: size, onSelected: (v) => setSheet(() => size = v)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: VgTextField(controller: heightCtrl, hint: 'Tinggi', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+                const SizedBox(width: 10),
+                Expanded(child: VgTextField(controller: roleCtrl, hint: 'Peran (mis. Snare)')),
+              ]),
+              const SizedBox(height: 12),
+              const Text('Ukuran Khusus / Detail Pengukuran (cm)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: VgTextField(controller: chestCtrl, hint: 'Lingkar Dada', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+                const SizedBox(width: 10),
+                Expanded(child: VgTextField(controller: waistCtrl, hint: 'Lingkar Pinggang', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: VgTextField(controller: shoulderCtrl, hint: 'Lebar Bahu', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+                const SizedBox(width: 10),
+                Expanded(child: VgTextField(controller: armCtrl, hint: 'Panjang Lengan', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: VgTextField(controller: pantsCtrl, hint: 'Panjang Celana/Rok', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+                const SizedBox(width: 10),
+                Expanded(child: VgTextField(controller: headCtrl, hint: 'Kepala Shako', suffix: 'cm', keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+              ]),
+              const SizedBox(height: 14),
+              VgButton(
+                label: 'Simpan',
+                expanded: true,
+                onPressed: () {
+                  if (nameCtrl.text.trim().isEmpty) return;
+                  int? p(TextEditingController c) => int.tryParse(c.text.trim());
+                  Navigator.pop(
+                    ctx,
+                    SizeEntry(
+                      id: existing?.id,
+                      studentName: nameCtrl.text.trim(),
+                      gender: gender,
+                      heightCm: p(heightCtrl),
+                      size: size,
+                      role: roleCtrl.text.trim().isEmpty ? null : roleCtrl.text.trim(),
+                      chestCm: p(chestCtrl),
+                      waistCm: p(waistCtrl),
+                      shoulderCm: p(shoulderCtrl),
+                      armCm: p(armCtrl),
+                      pantsCm: p(pantsCtrl),
+                      headCm: p(headCtrl),
+                    ),
+                  );
+                },
+              ),
             ]),
-            const SizedBox(height: 14),
-            VgButton(
-              label: 'Simpan',
-              expanded: true,
-              onPressed: () {
-                if (nameCtrl.text.trim().isEmpty) return;
-                Navigator.pop(
-                  ctx,
-                  SizeEntry(
-                    studentName: nameCtrl.text.trim(),
-                    gender: gender,
-                    heightCm: int.tryParse(heightCtrl.text),
-                    size: size,
-                    role: roleCtrl.text.trim().isEmpty ? null : roleCtrl.text.trim(),
-                  ),
-                );
-              },
-            ),
-          ]),
+          ),
         ),
       ),
     );
@@ -279,7 +354,7 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
                     SizedBox(height: 6),
                     Text('Pilih file Excel (.xlsx / .csv)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                     SizedBox(height: 2),
-                    Text('Kolom: Nama, L/P, Tinggi Badan, Ukuran, Peran', textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: AppColors.primary)),
+                    Text('Mendukung: Nama, L/P, TB, Ukuran, Peran, Dada, Lengan, Celana, Shako', textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: AppColors.primary)),
                   ]),
                 ),
               ),
@@ -298,9 +373,57 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
                     VgPill(label: _skipped.isEmpty ? 'Valid' : 'Periksa', color: _skipped.isEmpty ? AppColors.success : AppColors.warning, background: _skipped.isEmpty ? AppColors.successBg : AppColors.warningBg, dot: true, fontSize: 10.5),
                   ]),
                 ),
+              ] else if (order.hasCustomerFile) ...[
+                const SizedBox(height: 12),
+                VgInset(
+                  color: AppColors.beigeSoft,
+                  child: Row(children: [
+                    const VgIconBadge(icon: Icons.description_rounded, color: Color(0xFF1E7B45), background: Color(0xFFE8F5E9), size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const VgPill(label: 'Berkas Asli Pelanggan', color: Color(0xFF1E7B45), background: Color(0xFFE8F5E9), fontSize: 9.5),
+                        const SizedBox(height: 3),
+                        Text(order.customerFileName!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                        Text('${entries.length} data siswa terlampir lengkap', style: const TextStyle(fontSize: 11, color: AppColors.primary)),
+                      ]),
+                    ),
+                  ]),
+                ),
               ],
               const SizedBox(height: 12),
-              VgButton(label: kIsWeb ? 'Salin Format Template' : 'Unduh Template Excel', icon: Icons.download_rounded, style: VgButtonStyle.outline, expanded: true, height: 42, onPressed: _template),
+              if (entries.isNotEmpty) ...[
+                VgButton(
+                  label: 'Unduh Berkas Ukuran Pelanggan (${entries.length} Siswa)',
+                  icon: Icons.download_rounded,
+                  style: VgButtonStyle.green,
+                  expanded: true,
+                  height: 44,
+                  onPressed: () => downloadCustomerSizeExcel(
+                    context: context,
+                    order: order,
+                    customEntries: entries,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _template,
+                  icon: const Icon(Icons.file_copy_outlined, size: 16, color: AppColors.primary),
+                  label: const Text(
+                    'Unduh Template Kosong (.xlsx)',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ),
+              ] else ...[
+                VgButton(
+                  label: kIsWeb ? 'Salin Format Template' : 'Unduh Template Excel (.xlsx)',
+                  icon: Icons.download_rounded,
+                  style: VgButtonStyle.outline,
+                  expanded: true,
+                  height: 42,
+                  onPressed: _template,
+                ),
+              ],
             ]),
           ),
           VgCard(
@@ -384,6 +507,10 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(shown[i].studentName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
                               Text('${shown[i].genderLabel}${shown[i].heightCm != null ? ' · TB ${shown[i].heightCm}cm' : ''}', style: const TextStyle(fontSize: 11, color: AppColors.primary)),
+                              if (shown[i].hasMeasurements) ...[
+                                const SizedBox(height: 2),
+                                Text(shown[i].measurementsSummary, style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B5E00), fontWeight: FontWeight.w600)),
+                              ],
                             ]),
                           ),
                           SizedBox(
@@ -394,7 +521,7 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
                             width: 82,
                             child: Align(
                               alignment: Alignment.centerRight,
-                              child: shown[i].role == null ? const Text('-') : VgPill(label: shown[i].role!, color: AppColors.textPrimary, background: AppColors.beige, fontSize: 10),
+                              child: shown[i].cleanRole == '-' ? const Text('-') : VgPill(label: shown[i].cleanRole, color: AppColors.textPrimary, background: AppColors.beige, fontSize: 10),
                             ),
                           ),
                         ]),

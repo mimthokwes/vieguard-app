@@ -37,10 +37,9 @@ class _RefundScreenState extends State<RefundScreen> {
 
   Future<void> _submit(String rentalId, double amount) async {
     final rentals = context.read<RentalProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     if (amount > 0 && _proof == null) {
-      messenger.showSnackBar(const SnackBar(content: Text('Unggah bukti transfer refund terlebih dahulu.')));
+      VgAlert.error(context: context, message: 'Unggah bukti transfer refund terlebih dahulu.');
       return;
     }
     setState(() => _saving = true);
@@ -54,8 +53,18 @@ class _RefundScreenState extends State<RefundScreen> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? 'Refund ${Formatters.rupiah(amount)} tercatat dan pelanggan diberi tahu.' : rentals.errorMessage ?? 'Gagal mencatat refund.')));
-    if (ok) navigator.pop();
+    if (ok) {
+      VgAlert.confirm(
+        context: context,
+        title: 'Refund Berhasil',
+        message: 'Refund ${Formatters.rupiah(amount)} tercatat dan pelanggan diberi tahu.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
+      navigator.pop();
+    } else {
+      VgAlert.error(context: context, message: rentals.errorMessage ?? 'Gagal mencatat refund.');
+    }
   }
 
   @override

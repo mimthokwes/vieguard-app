@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "7722844186",
+    "project_id": "vieguard",
+    "storage_bucket": "vieguard.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:7722844186:android:d2d8763265f65c125e11a3",
+        "android_client_info": {
+          "package_name": "com.vieguard.vieguard_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBD0-ZwftDqpzBsNAnB4aGjdAzY23SXJ4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

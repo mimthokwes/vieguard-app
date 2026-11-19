@@ -136,10 +136,16 @@ class _InputHargaScreenState extends State<InputHargaScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_draftKey);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penawaran berhasil dikirim ke pelanggan.')));
+      VgAlert.confirm(
+        context: context,
+        title: 'Penawaran Terkirim',
+        message: 'Penawaran harga berhasil dikirimkan ke pelanggan.',
+        confirmLabel: 'Mantap',
+        onConfirm: () {},
+      );
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Gagal mengirim penawaran.')));
+      VgAlert.error(context: context, message: provider.errorMessage ?? 'Gagal mengirim penawaran.');
     }
   }
 

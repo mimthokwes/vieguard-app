@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/api/api_client.dart';
+import 'core/services/fcm_service.dart';
 import 'core/services/local_notification_service.dart';
 import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
@@ -19,6 +20,7 @@ import 'state/product_provider.dart';
 import 'state/rental_provider.dart';
 import 'state/report_provider.dart';
 import 'widgets/auth/auth_widgets.dart';
+import 'widgets/common/vg_alert.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +30,9 @@ Future<void> main() async {
 
   final tokenStorage = TokenStorage();
   final apiClient = ApiClient(tokenStorage: tokenStorage);
+
+  // Inisialisasi Firebase Cloud Messaging untuk push notification saat app mati / standby
+  await FcmService.initialize(apiClient: apiClient);
 
   runApp(VieguardApp(apiClient: apiClient, tokenStorage: tokenStorage));
 }
@@ -52,6 +57,7 @@ class VieguardApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider(apiClient: apiClient)..initFromCache()),
       ],
       child: MaterialApp(
+        navigatorKey: VgAlert.navigatorKey,
         title: 'VIEGUARD',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
