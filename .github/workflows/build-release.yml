@@ -41,6 +41,14 @@ jobs:
             fi
           fi
 
+      - name: Siapkan Google Services JSON
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          fi
+
       - name: Ekstraksi Versi Aplikasi
         id: version_step
         run: |
@@ -105,6 +113,14 @@ jobs:
             else
               touch .env
             fi
+          fi
+
+      - name: Siapkan Google Services JSON
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
       - name: Ekstraksi Versi Aplikasi

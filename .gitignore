@@ -50,6 +50,10 @@ app.*.map.json
 .kotlin/
 android/.kotlin/
 
+# Firebase configuration files
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
 # Widget Preview related
 .widget_preview/
 .claude
