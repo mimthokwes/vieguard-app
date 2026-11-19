@@ -30,7 +30,7 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
     try {
-      final data = await apiClient.get('/account/me');
+      final data = await apiClient.get('/account/me').timeout(const Duration(seconds: 5));
       var admin = Admin.fromJson(data as Map<String, dynamic>);
       final savedPhoto = await tokenStorage.readAdminPhoto();
       if ((admin.profilePhoto == null || admin.profilePhoto!.isEmpty) && savedPhoto != null) {

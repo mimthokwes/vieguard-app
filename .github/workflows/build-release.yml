@@ -36,7 +36,7 @@ jobs:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           if [ -n "$ENV_FILE" ]; then
-            echo "$ENV_FILE" > .env
+            printf "%s\n" "$ENV_FILE" > .env
           elif [ ! -f .env ]; then
             if [ -f .env.example ]; then
               cp .env.example .env
@@ -50,7 +50,7 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
       - name: Ekstraksi Versi Aplikasi
@@ -114,7 +114,7 @@ jobs:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           if [ -n "$ENV_FILE" ]; then
-            echo "$ENV_FILE" > .env
+            printf "%s\n" "$ENV_FILE" > .env
           elif [ ! -f .env ]; then
             if [ -f .env.example ]; then
               cp .env.example .env
@@ -128,7 +128,7 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
       - name: Ekstraksi Versi Aplikasi
