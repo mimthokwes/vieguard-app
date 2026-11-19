@@ -60,7 +60,7 @@ jobs:
 
       - name: Kompilasi APK Release
         run: |
-          flutter build apk --release --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}"
+          flutter build apk --release --android-skip-build-dependency-validation --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}"
 
       - name: Siapkan File APK Rilis
         run: |
