@@ -1,0 +1,197 @@
+name: Build and Release Mobile Apps
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Konfigurasi Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Konfigurasi Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Siapkan Berkas Lingkungan (.env)
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.example ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Ekstraksi Versi Aplikasi
+        id: version_step
+        run: |
+          FULL_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          VERSION_NAME=$(echo $FULL_VERSION | cut -d'+' -f1)
+          BUILD_NUM=$(echo $FULL_VERSION | cut -d'+' -f2)
+          if [ -z "$BUILD_NUM" ]; then
+            BUILD_NUM="1"
+          fi
+
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
+          echo "Versi Android: $VERSION_NAME+$BUILD_NUM"
+
+      - name: Ambil Dependensi Flutter
+        run: flutter pub get
+
+      - name: Kompilasi APK Release
+        run: |
+          flutter build apk --release --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}"
+
+      - name: Siapkan File APK Rilis
+        run: |
+          mkdir -p output_android
+          OUTPUT_APK="output_android/vieguard_v${{ env.VERSION_NAME }}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$OUTPUT_APK"
+          echo "File APK siap: $OUTPUT_APK"
+
+      - name: Unggah Artefak Android
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: output_android/*.apk
+          retention-days: 7
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Konfigurasi Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Konfigurasi Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Siapkan Berkas Lingkungan (.env)
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.example ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Ekstraksi Versi Aplikasi
+        id: version_step
+        run: |
+          FULL_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          VERSION_NAME=$(echo $FULL_VERSION | cut -d'+' -f1)
+          BUILD_NUM=$(echo $FULL_VERSION | cut -d'+' -f2)
+          if [ -z "$BUILD_NUM" ]; then
+            BUILD_NUM="1"
+          fi
+
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
+          echo "Versi iOS: $VERSION_NAME+$BUILD_NUM"
+
+      - name: Ambil Dependensi Flutter
+        run: flutter pub get
+
+      - name: Pasang CocoaPods
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Kompilasi iOS (Release Unsigned)
+        run: |
+          flutter build ios --release --no-codesign --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}"
+
+      - name: Kemas Menjadi Berkas IPA
+        run: |
+          mkdir -p Payload output_ios
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          OUTPUT_IPA="output_ios/vieguard_v${{ env.VERSION_NAME }}.ipa"
+          zip -r "$OUTPUT_IPA" Payload
+          rm -rf Payload
+          echo "File IPA siap: $OUTPUT_IPA"
+
+      - name: Unggah Artefak iOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: output_ios/*.ipa
+          retention-days: 7
+
+  release:
+    name: Buat Tag dan Rilis GitHub
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ekstraksi Versi Aplikasi
+        run: |
+          FULL_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          VERSION_NAME=$(echo $FULL_VERSION | cut -d'+' -f1)
+          echo "TAG_NAME=v$VERSION_NAME" >> $GITHUB_ENV
+          echo "Target Tag: v$VERSION_NAME"
+
+      - name: Unduh Artefak Android
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: release_assets/
+
+      - name: Unduh Artefak iOS
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+          path: release_assets/
+
+      - name: Publikasikan Rilis dan Buat Tag Git
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Daftar file rilis yang siap diunggah:"
+          ls -lh release_assets/
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME sudah ada. Memperbarui berkas aset rilis..."
+            gh release upload "$TAG_NAME" release_assets/* --clobber
+          else
+            echo "Membuat tag baru dan release untuk $TAG_NAME..."
+            gh release create "$TAG_NAME" release_assets/* \
+              --title "Vieguard $TAG_NAME" \
+              --notes "Rilis otomatis Vieguard versi $TAG_NAME dari branch main."
+          fi

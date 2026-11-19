@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/app_update_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
@@ -34,6 +35,9 @@ class _BerandaScreenState extends State<BerandaScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Cek pembaruan aplikasi secara otomatis saat membuka halaman beranda
+      AppUpdateService.checkForUpdateOnBeranda(context);
+
       // Berikan jeda 350ms agar animasi transisi masuk halaman selesai mulus 60fps
       // sebelum menjalankan 5 request API paralel di background.
       Future.delayed(const Duration(milliseconds: 350), () {
