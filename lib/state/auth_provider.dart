@@ -41,6 +41,9 @@ class AuthProvider extends ChangeNotifier {
     } on ApiException {
       await tokenStorage.clear();
       status = AuthStatus.unauthenticated;
+    } catch (e) {
+      debugPrint('[Auth] Gagal auto-login (koneksi/timeout): $e');
+      status = AuthStatus.unauthenticated;
     }
     notifyListeners();
   }
