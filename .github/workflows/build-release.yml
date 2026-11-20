@@ -84,11 +84,12 @@ jobs:
         run: |
           mkdir -p ~/.android
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > ~/.android/debug.keystore
-            echo "Android debug keystore berhasil disinkronkan:"
-            ls -lh ~/.android/debug.keystore
+            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > android/app/release.keystore
+            cp android/app/release.keystore ~/.android/debug.keystore
+            echo "Android release keystore berhasil disinkronkan ke android/app/release.keystore:"
+            ls -lh android/app/release.keystore
             echo "Sidik Jari SHA-1 Keystore yang Digunakan:"
-            keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:"
+            keytool -list -v -keystore android/app/release.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:"
           else
             echo "PERINGATAN: KEYSTORE_BASE64 tidak ditemukan!"
           fi
