@@ -150,9 +150,7 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
       'categoryId': _categoryId,
       'name': _name.text.trim(),
       if (_description.text.trim().isNotEmpty) 'description': _description.text.trim(),
-      'basePriceRent': _num(_priceRent),
-      // Tidak ada harga beli → barang sewaan murni
-      'basePriceBuy': null,
+      if (_num(_priceRent) != null) 'basePriceRent': _num(_priceRent),
       'isVisible': _visible,
       'isCustomAvailable': false,
       if (_sku.text.trim().isNotEmpty) 'sku': _sku.text.trim().toUpperCase(),
@@ -169,7 +167,7 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
       ],
       'accessories': [
         for (final a in _accessories)
-          if (a.name.text.trim().isNotEmpty)
+          if (a.name.text.trim().isNotEmpty && a.qty > 0)
             {'name': a.name.text.trim(), 'quantityPerSet': a.qty},
       ],
     }, _photos);
