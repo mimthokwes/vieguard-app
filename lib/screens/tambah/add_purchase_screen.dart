@@ -132,6 +132,7 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final problem = _validate();
     final messenger = ScaffoldMessenger.of(context);
     if (problem != null) {

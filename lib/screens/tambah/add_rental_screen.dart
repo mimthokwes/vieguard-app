@@ -13,8 +13,9 @@ import '../stok/stok_detail_screen.dart';
 // ─── model helper ─────────────────────────────────────────────────────────────
 class _VariantRow {
   final TextEditingController size;
+  int stockRent;
   TextEditingController priceOverride = TextEditingController();
-  _VariantRow(String s) : size = TextEditingController(text: s);
+  _VariantRow(String s, {this.stockRent = 1}) : size = TextEditingController(text: s);
   void dispose() {
     size.dispose();
     priceOverride.dispose();
@@ -138,6 +139,7 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final problem = _validate();
     final messenger = ScaffoldMessenger.of(context);
     if (problem != null) {
@@ -160,7 +162,7 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
           if (v.size.text.trim().isNotEmpty)
             {
               'size': v.size.text.trim().toUpperCase(),
-              'stockRent': 0, // Stok dikelola dari Beranda → Kelola Barang
+              'stockRent': v.stockRent,
               'stockBuy': 0,
               if (_num(v.priceOverride) != null) 'priceRentOverride': _num(v.priceOverride),
             },
@@ -323,8 +325,8 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
           VgCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               VgCardTitle(
-                title: 'Ukuran & Harga',
-                subtitle: 'Daftarkan ukuran yang tersedia. Stok diatur dari Kelola Barang.',
+                title: 'Ukuran, Stok & Harga',
+                subtitle: 'Daftarkan variasi ukuran dan jumlah unit siap disewakan',
                 trailing: VgPill(label: '${_variants.length} Ukuran', color: AppColors.primary, background: AppColors.beige),
               ),
               for (var i = 0; i < _variants.length; i++)
@@ -351,6 +353,15 @@ class _AddRentalItemScreenState extends State<AddRentalItemScreen> {
                             Icons.delete_outline_rounded,
                             color: _variants.length > 1 ? AppColors.danger : AppColors.border,
                           ),
+                        ),
+                      ]),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        const Expanded(child: Text('Stok Unit Siap Sewa', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
+                        VgStepper(
+                          value: _variants[i].stockRent,
+                          min: 0,
+                          onChanged: (val) => setState(() => _variants[i].stockRent = val),
                         ),
                       ]),
                       const SizedBox(height: 8),

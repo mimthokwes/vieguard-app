@@ -9,19 +9,25 @@ import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
 import '../../widgets/common/vg_skeleton.dart';
 import '../../widgets/vg/vg_ui.dart';
+import '../tambah/add_purchase_screen.dart';
+import '../tambah/add_rental_screen.dart';
 import 'product_form_screen.dart';
 import 'stok_detail_screen.dart';
+
+enum ProductTypeFilter { semua, sewaan, pembelian }
 
 enum _Sort { stok, nama, harga }
 
 class StokListScreen extends StatefulWidget {
-  const StokListScreen({super.key});
+  final ProductTypeFilter initialTypeFilter;
+  const StokListScreen({super.key, this.initialTypeFilter = ProductTypeFilter.semua});
 
   @override
   State<StokListScreen> createState() => _StokListScreenState();
 }
 
 class _StokListScreenState extends State<StokListScreen> {
+  late ProductTypeFilter _typeFilter;
   String? _categoryId;
   String _query = '';
   _Sort _sort = _Sort.stok;
@@ -30,6 +36,7 @@ class _StokListScreenState extends State<StokListScreen> {
   @override
   void initState() {
     super.initState();
+    _typeFilter = widget.initialTypeFilter;
     Future.microtask(() async {
       if (!mounted) return;
       final products = context.read<ProductProvider>();
@@ -60,7 +67,12 @@ class _StokListScreenState extends State<StokListScreen> {
     final ready = (total - rented - service).clamp(0, total);
     int pct(int v) => total == 0 ? 0 : (v * 100 / total).round();
 
-    final list = provider.filtered(categoryId: _categoryId, query: _query);
+    final rawList = provider.filtered(categoryId: _categoryId, query: _query);
+    final list = rawList.where((p) {
+      if (_typeFilter == ProductTypeFilter.sewaan) return p.isRentable;
+      if (_typeFilter == ProductTypeFilter.pembelian) return p.isPurchasable;
+      return true;
+    }).toList();
     int readyOf(Product p) => (p.totalStockRent - rentals.rentedQty(p.id) - p.totalInService).clamp(0, p.totalStockRent);
     switch (_sort) {
       case _Sort.stok:
@@ -70,7 +82,11 @@ class _StokListScreenState extends State<StokListScreen> {
         list.sort((a, b) => a.name.compareTo(b.name));
         break;
       case _Sort.harga:
-        list.sort((a, b) => (b.basePriceRent ?? 0).compareTo(a.basePriceRent ?? 0));
+        list.sort((a, b) {
+          final priceA = a.isRentable ? (a.basePriceRent ?? 0) : (a.basePriceBuy ?? 0);
+          final priceB = b.isRentable ? (b.basePriceRent ?? 0) : (b.basePriceBuy ?? 0);
+          return priceB.compareTo(priceA);
+        });
         break;
     }
 
@@ -120,6 +136,33 @@ class _StokListScreenState extends State<StokListScreen> {
               ],
             ),
           const SizedBox(height: 14),
+          // ── Tab Tipe Produk ───────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(children: [
+              _TypeTabItem(
+                label: 'Semua (${all.length})',
+                selected: _typeFilter == ProductTypeFilter.semua,
+                onTap: () => setState(() => _typeFilter = ProductTypeFilter.semua),
+              ),
+              _TypeTabItem(
+                label: 'Barang Sewa (${all.where((p) => p.isRentable).length})',
+                selected: _typeFilter == ProductTypeFilter.sewaan,
+                onTap: () => setState(() => _typeFilter = ProductTypeFilter.sewaan),
+              ),
+              _TypeTabItem(
+                label: 'Barang Beli (${all.where((p) => p.isPurchasable).length})',
+                selected: _typeFilter == ProductTypeFilter.pembelian,
+                onTap: () => setState(() => _typeFilter = ProductTypeFilter.pembelian),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 12),
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -213,7 +256,50 @@ class _StokListScreenState extends State<StokListScreen> {
         right: 16,
         bottom: inShell ? 96 : 24,
         child: TapScale(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductFormScreen())),
+          onTap: () {
+            if (_typeFilter == ProductTypeFilter.sewaan) {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddRentalItemScreen()));
+            } else if (_typeFilter == ProductTypeFilter.pembelian) {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPurchaseItemScreen()));
+            } else {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: AppColors.surface,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                builder: (ctx) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Tambah Item Baru', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                        const SizedBox(height: 12),
+                        ListTile(
+                          leading: const VgIconBadge(icon: Icons.checkroom_rounded, color: AppColors.primary, background: AppColors.beige),
+                          title: const Text('Barang Sewaan', style: TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: const Text('Kostum & aksesoris yang disewakan per hari'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AddRentalItemScreen()));
+                          },
+                        ),
+                        ListTile(
+                          leading: const VgIconBadge(icon: Icons.shopping_bag_outlined, color: AppColors.goldDark, background: AppColors.warningBg),
+                          title: const Text('Barang Pembelian', style: TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: const Text('Produk pembelian pakaian sistem Pre-Order'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPurchaseItemScreen()));
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+          },
           child: Container(
             height: 52,
             padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -311,10 +397,11 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rentals = context.watch<RentalProvider>();
+    final isRental = product.isRentable;
     final total = product.totalStockRent;
     final rented = rentals.rentedQty(product.id).clamp(0, total);
     final ready = (total - rented - product.totalInService).clamp(0, total);
-    final full = total > 0 && ready == 0;
+    final full = isRental && total > 0 && ready == 0;
     final returnDate = full ? rentals.earliestReturn(product.id) : null;
     final activeRental = full
         ? rentals.rentalsForProduct(product.id).where((o) => o.rental!.returnDate == returnDate).firstOrNull
@@ -344,22 +431,34 @@ class _ProductCard extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Expanded(
-                    child: Text(product.isVisible ? 'TAMPIL DI KATALOG' : 'DISEMBUNYIKAN', style: const TextStyle(fontSize: 11, color: AppColors.textPrimary, letterSpacing: 0.4)),
+                  VgPill(
+                    label: isRental ? 'Sewa' : 'Beli',
+                    color: isRental ? AppColors.primary : AppColors.goldDark,
+                    background: isRental ? AppColors.beige : AppColors.warningBg,
+                    fontSize: 10.5,
                   ),
-                  full
-                      ? const VgPill(label: 'Penuh Disewa', color: AppColors.danger, background: AppColors.dangerBg, fontSize: 10.5)
-                      : VgPill(label: '$ready Ready', color: AppColors.success, background: AppColors.beige, fontSize: 10.5),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(product.isVisible ? 'TAMPIL' : 'DISEMBUNYIKAN', style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary, letterSpacing: 0.4)),
+                  ),
+                  if (isRental)
+                    (full
+                        ? const VgPill(label: 'Penuh Disewa', color: AppColors.danger, background: AppColors.dangerBg, fontSize: 10.5)
+                        : VgPill(label: '$ready Ready', color: AppColors.success, background: AppColors.beige, fontSize: 10.5))
+                  else
+                    const VgPill(label: 'Pre-Order', color: AppColors.success, background: AppColors.beige, fontSize: 10.5),
                 ]),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                 Text('Kategori: ${product.categoryName}', style: const TextStyle(fontSize: 12.5, color: AppColors.primary)),
                 const SizedBox(height: 6),
-                if (product.basePriceRent != null)
+                if (isRental && product.basePriceRent != null)
                   Text.rich(TextSpan(children: [
                     TextSpan(text: Formatters.rupiah(product.basePriceRent!), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
                     const TextSpan(text: ' / hari', style: TextStyle(fontSize: 12.5, color: AppColors.primary)),
-                  ])),
+                  ]))
+                else if (!isRental && product.basePriceBuy != null)
+                  Text(Formatters.rupiah(product.basePriceBuy!), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
               ]),
             ),
           ]),
@@ -371,12 +470,20 @@ class _ProductCard extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: Text.rich(TextSpan(children: [
-                  TextSpan(text: full ? 'Tersedia: ' : 'Stok Tersedia: ', style: TextStyle(color: full ? AppColors.danger : AppColors.textSecondary)),
-                  TextSpan(text: '$ready', style: TextStyle(fontWeight: FontWeight.w700, color: full ? AppColors.danger : AppColors.textPrimary)),
-                  TextSpan(text: ' dari $total Stel', style: TextStyle(color: full ? AppColors.danger : AppColors.textSecondary)),
+                  if (isRental) ...[
+                    TextSpan(text: full ? 'Tersedia: ' : 'Stok Tersedia: ', style: TextStyle(color: full ? AppColors.danger : AppColors.textSecondary)),
+                    TextSpan(text: '$ready', style: TextStyle(fontWeight: FontWeight.w700, color: full ? AppColors.danger : AppColors.textPrimary)),
+                    TextSpan(text: ' dari $total Stel', style: TextStyle(color: full ? AppColors.danger : AppColors.textSecondary)),
+                  ] else ...[
+                    const TextSpan(text: 'Model: ', style: TextStyle(color: AppColors.textSecondary)),
+                    const TextSpan(text: 'Pre-Order Pembelian', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  ],
                 ]), style: const TextStyle(fontSize: 12.5)),
               ),
-              Text(full ? '100% Terpakai' : '$rented Sedang Disewa', style: TextStyle(fontSize: 12.5, color: full ? AppColors.danger : AppColors.primary)),
+              if (isRental)
+                Text(full ? '100% Terpakai' : '$rented Sedang Disewa', style: TextStyle(fontSize: 12.5, color: full ? AppColors.danger : AppColors.primary))
+              else
+                Text('${product.variants.length} Ukuran', style: const TextStyle(fontSize: 12.5, color: AppColors.primary, fontWeight: FontWeight.w600)),
             ]),
             const SizedBox(height: 6),
             ClipRRect(
@@ -384,9 +491,13 @@ class _ProductCard extends StatelessWidget {
               child: SizedBox(
                 height: 7,
                 child: Row(children: [
-                  if (ready > 0) Expanded(flex: ready, child: Container(color: const Color(0xFF22A447))),
-                  if (rented > 0) Expanded(flex: rented, child: Container(color: full ? AppColors.danger : AppColors.primary)),
-                  if (total == 0) Expanded(child: Container(color: AppColors.border)),
+                  if (isRental) ...[
+                    if (ready > 0) Expanded(flex: ready, child: Container(color: const Color(0xFF22A447))),
+                    if (rented > 0) Expanded(flex: rented, child: Container(color: full ? AppColors.danger : AppColors.primary)),
+                    if (total == 0) Expanded(child: Container(color: AppColors.border)),
+                  ] else ...[
+                    Expanded(child: Container(color: const Color(0xFF22A447))),
+                  ],
                 ]),
               ),
             ),
@@ -432,17 +543,25 @@ class _ProductCard extends StatelessWidget {
                   ]),
                 ])
               : Row(children: [
-                  const Text('Ukuran: ', style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary)),
+                  Text(isRental ? 'Stok Size: ' : 'Ukuran: ', style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary)),
                   Expanded(
                     child: Wrap(spacing: 6, runSpacing: 6, children: [
                       for (final v in product.variants)
                         Builder(builder: (context) {
-                          final r = (v.stockRent - rentals.rentedQty(product.id, size: v.size) - v.stockInService).clamp(0, v.stockRent);
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: r == 0 ? AppColors.dangerBg : AppColors.beige, borderRadius: BorderRadius.circular(6)),
-                            child: Text('${v.size} ($r)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: r == 0 ? AppColors.danger : AppColors.textPrimary)),
-                          );
+                          if (isRental) {
+                            final r = (v.stockRent - rentals.rentedQty(product.id, size: v.size) - v.stockInService).clamp(0, v.stockRent);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: r == 0 ? AppColors.dangerBg : AppColors.beige, borderRadius: BorderRadius.circular(6)),
+                              child: Text('${v.size} ($r)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: r == 0 ? AppColors.danger : AppColors.textPrimary)),
+                            );
+                          } else {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(6)),
+                              child: Text(v.size, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            );
+                          }
                         }),
                       if (product.variants.isEmpty) const Text('-', style: TextStyle(fontSize: 12)),
                     ]),
@@ -457,6 +576,39 @@ class _ProductCard extends StatelessWidget {
                 ]),
         ),
       ]),
+    );
+  }
+}
+
+class _TypeTabItem extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TypeTabItem({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? Colors.white : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

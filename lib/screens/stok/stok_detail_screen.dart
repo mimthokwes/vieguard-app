@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/storage/image_cache_service.dart';
@@ -9,8 +10,9 @@ import '../../models/product_model.dart';
 import '../../state/product_provider.dart';
 import '../../state/rental_provider.dart';
 import '../../widgets/common/tap_scale.dart';
-import '../../widgets/vg/vg_ui.dart';
+import '../../widgets/common/vg_alert.dart';
 import '../../widgets/vg/vg_form.dart';
+import '../../widgets/vg/vg_ui.dart';
 import '../penyewaan/penyewaan_detail_screen.dart';
 import 'stock_adjust_screen.dart';
 
@@ -26,6 +28,42 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
   int _image = 0;
   bool _showAllHistory = false;
 
+  final _nameController = TextEditingController();
+  final _skuController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
+  String? _categoryId;
+  String _conditionGrade = 'A';
+  bool _isCustomAvailable = false;
+  bool _initialized = false;
+  bool _updating = false;
+  bool _deleting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _skuController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  void _initForm(Product product) {
+    if (_initialized) return;
+    _nameController.text = product.name;
+    _skuController.text = product.sku ?? '';
+    _descriptionController.text = product.description ?? '';
+    if (product.isRentable) {
+      _priceController.text = product.basePriceRent?.toStringAsFixed(0) ?? '';
+    } else {
+      _priceController.text = product.basePriceBuy?.toStringAsFixed(0) ?? '';
+    }
+    _categoryId = product.categoryId;
+    _conditionGrade = product.conditionGrade ?? 'A';
+    _isCustomAvailable = product.isCustomAvailable;
+    _initialized = true;
+  }
+
   void _zoom(String url) {
     showDialog(
       context: context,
@@ -40,27 +78,151 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
     );
   }
 
+  Future<void> _saveProductChanges(Product product) async {
+    if (_updating) return;
+    final name = _nameController.text.trim();
+    if (name.length < 2) {
+      VgAlert.error(context: context, title: 'Validasi Gagal', message: 'Nama produk minimal 2 karakter.');
+      return;
+    }
+    final rawPrice = _priceController.text.replaceAll('.', '').replaceAll(',', '').trim();
+    final price = double.tryParse(rawPrice);
+    if (price == null || price < 0) {
+      VgAlert.error(context: context, title: 'Validasi Gagal', message: 'Harap masukkan nominal harga yang valid.');
+      return;
+    }
+
+    setState(() => _updating = true);
+    final provider = context.read<ProductProvider>();
+    final payload = <String, dynamic>{
+      'name': name,
+      'categoryId': _categoryId ?? product.categoryId,
+      'sku': _skuController.text.trim().toUpperCase(),
+      'description': _descriptionController.text.trim(),
+      'isCustomAvailable': _isCustomAvailable,
+    };
+
+    if (product.isRentable) {
+      payload['basePriceRent'] = price;
+      payload['conditionGrade'] = _conditionGrade;
+    } else {
+      payload['basePriceBuy'] = price;
+    }
+
+    final updated = await provider.updateProduct(product.id, payload);
+    if (!mounted) return;
+    setState(() => _updating = false);
+
+    if (updated != null) {
+      VgAlert.success(
+        context: context,
+        title: 'Berhasil Diperbarui',
+        message: 'Informasi produk berhasil disimpan.',
+      );
+    } else {
+      VgAlert.error(
+        context: context,
+        title: 'Gagal Memperbarui',
+        message: provider.errorMessage ?? 'Gagal menyimpan perubahan produk.',
+      );
+    }
+  }
+
   Future<void> _toggleVisibility(Product product) async {
     final provider = context.read<ProductProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final ok = await provider.toggleVisibility(product.id, !product.isVisible);
-    messenger.showSnackBar(SnackBar(
-      content: Text(ok ? (product.isVisible ? 'Produk disembunyikan dari katalog.' : 'Produk ditampilkan di katalog.') : provider.errorMessage ?? 'Gagal memperbarui.'),
-    ));
+    final targetStatus = !product.isVisible;
+    final ok = await provider.toggleVisibility(product.id, targetStatus);
+    if (!mounted) return;
+    if (ok) {
+      VgAlert.success(
+        context: context,
+        title: 'Visibilitas Diperbarui',
+        message: targetStatus ? 'Produk sekarang ditampilkan di katalog.' : 'Produk telah disembunyikan dari katalog.',
+      );
+    } else {
+      VgAlert.error(
+        context: context,
+        title: 'Gagal Memperbarui',
+        message: provider.errorMessage ?? 'Gagal mengubah visibilitas produk.',
+      );
+    }
+  }
+
+  void _confirmDelete(Product product) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Produk', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+        content: Text('Apakah Anda yakin ingin menghapus "${product.name}"? Produk ini akan dinonaktifkan dari katalog.'),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Row(children: [
+            Expanded(
+              child: VgButton(
+                label: 'Batal',
+                style: VgButtonStyle.soft,
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  setState(() => _deleting = true);
+                  final provider = context.read<ProductProvider>();
+                  final ok = await provider.deleteProduct(product.id);
+                  if (!mounted) return;
+                  setState(() => _deleting = false);
+                  if (ok) {
+                    VgAlert.success(
+                      context: context,
+                      title: 'Produk Dihapus',
+                      message: 'Produk "${product.name}" berhasil dihapus.',
+                    );
+                    Navigator.pop(context);
+                  } else {
+                    VgAlert.error(
+                      context: context,
+                      title: 'Gagal Menghapus',
+                      message: provider.errorMessage ?? 'Terjadi kesalahan saat menghapus produk.',
+                    );
+                  }
+                },
+                child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final product = context.watch<ProductProvider>().productById(widget.productId);
+    final provider = context.watch<ProductProvider>();
+    final product = provider.productById(widget.productId);
     final rentals = context.watch<RentalProvider>();
+
     if (product == null) {
-      return const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Detail Stok Item'), body: Center(child: Text('Produk tidak ditemukan.')));
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: VgBackBar(title: 'Detail Stok Item'),
+        body: Center(child: Text('Produk tidak ditemukan.')),
+      );
     }
 
-    final total = product.totalStockRent;
-    final rented = rentals.rentedQty(product.id).clamp(0, total);
-    final service = product.totalInService;
-    final ready = (total - rented - service).clamp(0, total);
+    _initForm(product);
+
     final history = rentals.rentalsForProduct(product.id);
     final year = DateTime.now().year;
     final revenue = history
@@ -69,13 +231,15 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
         .where((i) => i.productId == product.id)
         .fold<double>(0, (s, i) => s + i.subtotal);
     final images = product.imageUrls;
+    final categories = provider.categories;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const VgBackBar(title: 'Detail Stok Item'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
         children: [
+          // ── Foto Banner & Gallery ───────────────────────────────────────────
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
@@ -91,24 +255,22 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
                   left: 12,
                   top: 12,
                   child: VgPill(
-                    label: product.conditionGrade != null
-                        ? 'Grade ${product.conditionGrade} · ${const {'A': 'Sangat Terawat', 'B': 'Baik', 'C': 'Perlu Servis'}[product.conditionGrade] ?? ''}'
-                        : (product.isVisible ? 'Tampil di Katalog' : 'Disembunyikan'),
-                    color: product.isVisible ? AppColors.success : AppColors.textSecondary,
+                    label: product.isRentable
+                        ? 'Barang Sewa · Grade ${product.conditionGrade ?? "A"}'
+                        : 'Barang Pembelian (Pre-Order)',
+                    color: product.isRentable ? AppColors.primary : AppColors.goldDark,
                     background: Colors.white,
                     dot: true,
                     fontSize: 11,
                   ),
                 ),
-                if (product.isCustomAvailable)
-                  const Positioned(right: 12, top: 12, child: VgPill(label: 'Bisa Custom', color: AppColors.onGold, background: AppColors.goldLight, icon: Icons.star_rounded, fontSize: 11)),
                 Positioned(
                   left: 14,
                   bottom: 14,
                   right: 60,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(product.sku != null ? 'SKU Inventaris' : 'Kategori', style: const TextStyle(fontSize: 11.5, color: Colors.white70)),
-                    Text(product.sku != null ? '#${product.sku}' : product.categoryName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text(product.sku != null && product.sku!.isNotEmpty ? 'SKU Inventaris' : 'Kategori', style: const TextStyle(fontSize: 11.5, color: Colors.white70)),
+                    Text(product.sku != null && product.sku!.isNotEmpty ? '#${product.sku}' : product.categoryName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
                   ]),
                 ),
                 if (images.isNotEmpty)
@@ -150,77 +312,125 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
             ),
           ],
           const SizedBox(height: 16),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: Text(product.name, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.2))),
-            TapScale(
-              onTap: () => _toggleVisibility(product),
-              child: VgIconBadge(icon: product.isVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 34, circle: true),
-            ),
-          ]),
+
+          // ── Nama Produk (Ikon mata dihapus sesuai instruksi) ────────────────
+          Text(
+            product.name,
+            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.2),
+          ),
           const SizedBox(height: 4),
           Text(
             [product.categoryName, if (product.description != null && product.description!.isNotEmpty) product.description!].join(' • '),
             style: const TextStyle(fontSize: 13.5, color: AppColors.primary, height: 1.35),
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.maroonBright,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))],
-            ),
-            child: Column(children: [
-              Row(children: [
-                const Icon(Icons.sensors_rounded, size: 16, color: AppColors.goldLight),
-                const SizedBox(width: 6),
-                const Expanded(child: Text('KETERSEDIAAN REAL-TIME', style: TextStyle(fontSize: 12, color: Colors.white, letterSpacing: 0.8))),
-                VgPill(label: 'Sinkron Data Sewa', color: Colors.white, background: Colors.white.withValues(alpha: 0.15), dot: true, fontSize: 10.5),
-              ]),
-              const SizedBox(height: 14),
-              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Total Inventaris Sewa', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                    Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                      Text('$total', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white)),
-                      const SizedBox(width: 6),
-                      const Text('Stel', style: TextStyle(fontSize: 14, color: Colors.white)),
-                    ]),
-                  ]),
+
+          // ── Form Edit Data Produk (Pengganti Ketersediaan Real-Time) ─────────
+          VgCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              VgCardTitle(
+                title: 'Update Informasi Produk',
+                subtitle: 'Ubah nama, harga, deskripsi, dan kategori produk',
+                trailing: VgPill(
+                  label: product.isRentable ? 'Barang Sewa' : 'Barang Pembelian',
+                  color: product.isRentable ? AppColors.primary : AppColors.goldDark,
+                  background: product.isRentable ? AppColors.beige : AppColors.warningBg,
                 ),
-                Flexible(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    const Text('Rasio Siap Pakai', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.white70)),
-                    Text('${total == 0 ? 0 : (ready * 100 / total).round()}% Available', textAlign: TextAlign.right, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
-                  ]),
-                ),
-              ]),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  _AvailTile(icon: Icons.inventory_2_outlined, title: 'Di Rak', value: ready, caption: 'Siap Sewa', color: const Color(0xFFFF8A8A)),
-                  _AvailTile(icon: Icons.local_shipping_outlined, title: 'Di Luar', value: rented, caption: 'Disewa Aktif', color: Colors.white70),
-                  _AvailTile(icon: Icons.local_laundry_service_outlined, title: 'Servis', value: service, caption: 'Cuci / Jahit', color: AppColors.goldLight),
+              ),
+              const VgLabel('Nama Produk *'),
+              VgTextField(
+                controller: _nameController,
+                hint: 'Contoh: Kostum Mayoret Sapphire Royal',
+              ),
+              const SizedBox(height: 12),
+
+              const VgLabel('Kategori Produk'),
+              categories.isEmpty
+                  ? const Text('Belum ada kategori.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))
+                  : VgChoiceChips<String>(
+                      options: [for (final c in categories) (c.id, c.name)],
+                      selected: _categoryId,
+                      onSelected: (v) => setState(() => _categoryId = v),
+                    ),
+              const SizedBox(height: 12),
+
+              VgLabel(product.isRentable ? 'Harga Sewa / Hari *' : 'Harga Beli (Pre-Order) *'),
+              VgTextField(
+                controller: _priceController,
+                prefix: 'Rp',
+                suffix: product.isRentable ? '/ hari' : null,
+                strong: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                hint: product.isRentable ? '50000' : '150000',
+              ),
+              const SizedBox(height: 12),
+
+              const VgLabel('Kode SKU (opsional)'),
+              VgTextField(
+                controller: _skuController,
+                hint: 'Contoh: MYR-001',
+              ),
+              const SizedBox(height: 12),
+
+              if (product.isRentable) ...[
+                const VgLabel('Kondisi Fisik Kostum'),
+                Row(children: [
+                  for (final g in [
+                    ('A', 'Grade A (Sangat Terawat)'),
+                    ('B', 'Grade B (Baik)'),
+                    ('C', 'Grade C (Perlu Servis)'),
+                  ])
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: TapScale(
+                          onTap: () => setState(() => _conditionGrade = g.$1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _conditionGrade == g.$1 ? AppColors.primary : AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _conditionGrade == g.$1 ? AppColors.primary : AppColors.border),
+                            ),
+                            child: Text(
+                              g.$1,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _conditionGrade == g.$1 ? Colors.white : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ]),
+                const SizedBox(height: 12),
+              ],
+
+              const VgLabel('Deskripsi Produk (opsional)'),
+              VgTextField(
+                controller: _descriptionController,
+                maxLines: 3,
+                hint: 'Keterangan bahan, detail kelengkapan, dll.',
+              ),
+              const SizedBox(height: 16),
+
+              VgButton(
+                label: 'Simpan Perubahan Produk',
+                icon: Icons.save_outlined,
+                expanded: true,
+                height: 48,
+                loading: _updating,
+                onPressed: () => _saveProductChanges(product),
               ),
             ]),
           ),
-          const SizedBox(height: 20),
-          Row(children: [
-            const Icon(Icons.straighten_rounded, color: AppColors.primary),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('Breakdown Stok Unit Size', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
-            Text('${product.variants.length} Variasi Ukuran', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
-          ]),
-          const SizedBox(height: 12),
-          if (product.variants.isEmpty)
-            const VgCard(child: Text('Belum ada varian ukuran.', style: TextStyle(color: AppColors.textSecondary)))
-          else
-            for (final v in product.variants) _SizeCard(variant: v, rented: rentals.rentedQty(product.id, size: v.size)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 14),
+
+          // ── Aksesoris (khusus rental jika ada) ────────────────────────────────
           if (product.accessories.isNotEmpty)
             VgCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -243,88 +453,96 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
                   ),
               ]),
             ),
-          VgCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Icon(Icons.history_rounded, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Riwayat & Utilisasi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
-                if (history.length > 3)
-                  TapScale(
-                    onTap: () => setState(() => _showAllHistory = !_showAllHistory),
-                    child: Text(_showAllHistory ? 'Ringkas' : 'Lihat Semua', style: const TextStyle(fontSize: 12.5, color: AppColors.primary, fontWeight: FontWeight.w600)),
-                  ),
-              ]),
-              const SizedBox(height: 12),
-              VgInset(
-                child: Row(children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.payments_outlined, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Total Omset Sewa Item Ini', style: TextStyle(fontSize: 12, color: AppColors.primary)),
-                      FittedBox(fit: BoxFit.scaleDown, child: Text(Formatters.rupiah(revenue), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.primary))),
-                    ]),
-                  ),
-                  VgPill(label: 'Tahun $year', color: AppColors.textPrimary, background: AppColors.surface, fontSize: 11),
+
+          // ── Riwayat Penyewaan & Omset (jika barang sewa) ──────────────────────
+          if (product.isRentable)
+            VgCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.history_rounded, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('Riwayat & Utilisasi Sewa', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                  if (history.length > 3)
+                    TapScale(
+                      onTap: () => setState(() => _showAllHistory = !_showAllHistory),
+                      child: Text(_showAllHistory ? 'Ringkas' : 'Lihat Semua', style: const TextStyle(fontSize: 12.5, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    ),
                 ]),
-              ),
-              const SizedBox(height: 10),
-              if (history.isEmpty)
-                const Text('Belum ada riwayat penyewaan untuk item ini.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))
-              else
-                for (final o in (_showAllHistory ? history : history.take(3)))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: TapScale(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PenyewaanDetailScreen(orderId: o.id))),
-                      child: VgInset(
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(
-                            margin: const EdgeInsets.only(top: 5),
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(color: o.rental!.status == RentalStatus.dikembalikan ? AppColors.success : AppColors.primary, shape: BoxShape.circle),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(o.customer.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                              Text('#${o.orderNumber}', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
+                const SizedBox(height: 12),
+                VgInset(
+                  child: Row(children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.payments_outlined, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text('Total Omset Sewa Item Ini', style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                        FittedBox(fit: BoxFit.scaleDown, child: Text(Formatters.rupiah(revenue), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.primary))),
+                      ]),
+                    ),
+                    VgPill(label: 'Tahun $year', color: AppColors.textPrimary, background: AppColors.surface, fontSize: 11),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+                if (history.isEmpty)
+                  const Text('Belum ada riwayat penyewaan untuk item ini.', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))
+                else
+                  for (final o in (_showAllHistory ? history : history.take(3)))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TapScale(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PenyewaanDetailScreen(orderId: o.id))),
+                        child: VgInset(
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 5),
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(color: o.rental!.status == RentalStatus.dikembalikan ? AppColors.success : AppColors.primary, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(o.customer.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                                Text('#${o.orderNumber}', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
+                              ]),
+                            ),
+                            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                              Text(
+                                '${o.items.where((i) => i.productId == product.id).fold<int>(0, (s, i) => s + i.quantity)} Stel',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                              ),
+                              Text(
+                                o.rental!.status == RentalStatus.dikembalikan ? 'Selesai ${Formatters.date(o.rental!.actualReturnDate ?? o.rental!.returnDate)}' : 'Kembali ${Formatters.date(o.rental!.returnDate)}',
+                                style: TextStyle(fontSize: 11.5, color: o.rental!.status == RentalStatus.dikembalikan ? AppColors.success : AppColors.primary),
+                              ),
                             ]),
-                          ),
-                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                            Text(
-                              '${o.items.where((i) => i.productId == product.id).fold<int>(0, (s, i) => s + i.quantity)} Stel',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                            ),
-                            Text(
-                              o.rental!.status == RentalStatus.dikembalikan ? 'Selesai ${Formatters.date(o.rental!.actualReturnDate ?? o.rental!.returnDate)}' : 'Kembali ${Formatters.date(o.rental!.returnDate)}',
-                              style: TextStyle(fontSize: 11.5, color: o.rental!.status == RentalStatus.dikembalikan ? AppColors.success : AppColors.primary),
-                            ),
                           ]),
-                        ]),
+                        ),
                       ),
                     ),
-                  ),
-            ]),
-          ),
+              ]),
+            ),
         ],
       ),
+
+      // ── Tombol Aksi di Bottom Bar ───────────────────────────────────────────
       bottomNavigationBar: VgBottomBar(children: [
+        // 1. Tombol Update Status & Stok Unit (Tetap dipertahankan)
         VgButton(
           label: 'Update Status & Stok Unit',
           icon: Icons.edit_note_rounded,
           expanded: true,
-          height: 52,
+          height: 48,
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StockAdjustScreen(productId: product.id))),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
+
+        // 2. Tombol Sembunyikan / Tampilkan di Katalog (Di atas tombol hapus)
         VgButton(
           label: product.isVisible ? 'Sembunyikan dari Katalog' : 'Tampilkan di Katalog',
           icon: product.isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -333,107 +551,30 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
           height: 44,
           onPressed: () => _toggleVisibility(product),
         ),
-        const SizedBox(height: 6),
-      ]),
-    );
-  }
-}
+        const SizedBox(height: 8),
 
-class _AvailTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final int value;
-  final String caption;
-  final Color color;
-
-  const _AvailTile({required this.icon, required this.title, required this.value, required this.caption, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(3),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-        child: Column(children: [
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 4),
-            Flexible(child: Text(title, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: color))),
-          ]),
-          Text('$value', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
-          Text(caption, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _SizeCard extends StatelessWidget {
-  final ProductVariant variant;
-  final int rented;
-
-  const _SizeCard({required this.variant, required this.rented});
-
-  @override
-  Widget build(BuildContext context) {
-    final total = variant.stockRent;
-    final ready = (total - rented - variant.stockInService).clamp(0, total);
-    final empty = ready == 0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border), boxShadow: AppColors.cardShadow),
-      child: Column(children: [
-        Row(children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: empty ? AppColors.warningBg : AppColors.beige, borderRadius: BorderRadius.circular(8)),
-            child: FittedBox(child: Text(variant.size, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: empty ? AppColors.goldDark : AppColors.primary))),
+        // 3. Tombol Hapus Produk
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.dangerBg,
+            foregroundColor: AppColors.danger,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFFCA5A5)),
+            ),
+            minimumSize: const Size(double.infinity, 44),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Text('Ukuran ${variant.size}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
-          if (variant.stockInService > 0)
-            const VgPill(label: 'Maintenance', color: AppColors.goldDark, background: AppColors.warningBg, icon: Icons.build_outlined, fontSize: 10.5)
-          else if (empty)
-            const VgPill(label: 'Habis', color: AppColors.danger, background: AppColors.dangerBg, icon: Icons.inventory_outlined, fontSize: 10.5)
-          else
-            const VgPill(label: 'Aktif', color: AppColors.success, background: AppColors.successBg, dot: true, fontSize: 10.5),
-        ]),
-        if (variant.serviceNote != null && variant.stockInService > 0) ...[
-          const SizedBox(height: 6),
-          Align(alignment: Alignment.centerLeft, child: Text(variant.serviceNote!, style: const TextStyle(fontSize: 11.5, color: AppColors.goldDark))),
-        ],
-        const SizedBox(height: 10),
-        VgInset(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          radius: 8,
-          child: Row(children: [
-            _Cell(label: 'Total', value: total, color: AppColors.textPrimary),
-            _Cell(label: 'Ready', value: ready, color: empty ? AppColors.danger : AppColors.success),
-            _Cell(label: 'Disewa', value: rented, color: AppColors.primary),
-            _Cell(label: 'Servis', value: variant.stockInService, color: variant.stockInService > 0 ? AppColors.goldDark : AppColors.textPrimary),
-          ]),
+          onPressed: _deleting ? null : () => _confirmDelete(product),
+          child: _deleting
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.danger))
+              : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+                  SizedBox(width: 8),
+                  Text('Hapus Produk', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.danger)),
+                ]),
         ),
-      ]),
-    );
-  }
-}
-
-class _Cell extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color color;
-  const _Cell({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(children: [
-        Text(label, style: TextStyle(fontSize: 11.5, color: color)),
-        Text('$value', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        const SizedBox(height: 6),
       ]),
     );
   }

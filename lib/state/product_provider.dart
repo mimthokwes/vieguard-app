@@ -74,10 +74,48 @@ class ProductProvider extends ChangeNotifier {
   Future<bool> toggleVisibility(String id, bool isVisible) async {
     try {
       await apiClient.patch('/products/$id/visibility', data: {'isVisible': isVisible});
-      await fetchAll();
+      await fetchAll(force: true);
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<Product?> updateProduct(String id, Map<String, dynamic> data) async {
+    try {
+      final cleanData = Map<String, dynamic>.from(data)
+        ..removeWhere((key, value) => value == null);
+      final updated = await apiClient.put('/products/$id', data: cleanData);
+      await fetchAll(force: true);
+      return productById(id) ?? Product.fromJson(updated as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> deleteProduct(String id) async {
+    try {
+      await apiClient.delete('/products/$id');
+      await fetchAll(force: true);
+      return true;
+    } on ApiException catch (e) {
+      errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      errorMessage = e.toString();
       notifyListeners();
       return false;
     }
@@ -138,16 +176,24 @@ class ProductProvider extends ChangeNotifier {
       final created = await apiClient.post('/products', data: cleanData);
       final id = (created as Map<String, dynamic>)['id'].toString();
       if (photos.isNotEmpty) {
-        final form = FormData();
-        for (final photo in photos) {
-          form.files.add(MapEntry('productImages', ApiClient.imageFile(await photo.readAsBytes(), photo.name)));
+        try {
+          final form = FormData();
+          for (final photo in photos) {
+            form.files.add(MapEntry('productImages', ApiClient.imageFile(await photo.readAsBytes(), photo.name)));
+          }
+          await apiClient.postForm('/products/$id/images', form);
+        } catch (imgError) {
+          debugPrint('Error uploading product images: $imgError');
         }
-        await apiClient.postForm('/products/$id/images', form);
       }
-      await fetchAll();
-      return productById(id);
+      await fetchAll(force: true);
+      return productById(id) ?? Product.fromJson(created as Map<String, dynamic>);
     } on ApiException catch (e) {
       errorMessage = e.message;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      errorMessage = e.toString();
       notifyListeners();
       return null;
     }

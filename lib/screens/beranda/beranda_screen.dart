@@ -120,8 +120,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
                       child: _KelolaTile(
                         icon: Icons.checkroom_rounded,
                         title: 'Kelola Barang',
-                        subtitle: '${products.products.length} Item',
-                        onTap: () => _push(const Scaffold(backgroundColor: AppColors.background, appBar: VgBackBar(title: 'Manajemen Stok'), body: StokListScreen())),
+                        subtitle: '${products.products.where((p) => p.isPurchasable).length} Item',
+                        onTap: () => _push(const Scaffold(
+                          backgroundColor: AppColors.background,
+                          appBar: VgBackBar(title: 'Kelola Barang Pembelian'),
+                          body: StokListScreen(initialTypeFilter: ProductTypeFilter.pembelian),
+                        )),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -129,8 +133,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
                       child: _KelolaTile(
                         icon: Icons.assignment_outlined,
                         title: 'Kelola Sewaan',
-                        subtitle: '$bookedRentals Aktif',
-                        onTap: () => _push(const PenyewaanListScreen()),
+                        subtitle: '${products.products.where((p) => p.isRentable).length} Item',
+                        onTap: () => _push(const Scaffold(
+                          backgroundColor: AppColors.background,
+                          appBar: VgBackBar(title: 'Kelola Barang Sewaan'),
+                          body: StokListScreen(initialTypeFilter: ProductTypeFilter.sewaan),
+                        )),
                       ),
                     ),
                   ]),

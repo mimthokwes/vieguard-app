@@ -81,7 +81,13 @@ class Product {
 
   int get totalStockRent => variants.fold(0, (sum, v) => sum + v.stockRent);
 
+  int get totalStockBuy => variants.fold(0, (sum, v) => sum + v.stockBuy);
+
   int get totalInService => variants.fold(0, (sum, v) => sum + v.stockInService);
+
+  bool get isRentable => (basePriceRent != null && basePriceRent! > 0) || variants.any((v) => v.stockRent > 0 || (v.priceRentOverride != null && v.priceRentOverride! > 0));
+
+  bool get isPurchasable => !isRentable && ((basePriceBuy != null && basePriceBuy! > 0) || variants.any((v) => v.stockBuy > 0 || (v.priceBuyOverride != null && v.priceBuyOverride! > 0)));
 
   factory Product.fromJson(Map<String, dynamic> json) {
     final category = json['category'] as Map<String, dynamic>?;
