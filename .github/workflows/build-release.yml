@@ -104,33 +104,7 @@ jobs:
           OUTPUT_APK="output_android/vieguard_v${{ env.VERSION_NAME }}.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "$OUTPUT_APK"
           echo "File APK siap: $OUTPUT_APK"
-          echo "Memverifikasi SHA-1 tanda tangan APK rilis:"
-          python3 -c '
-          import struct, hashlib
-          with open("'$OUTPUT_APK'", "rb") as f: data = f.read()
-          eocd = data.rfind(b"\x50\x4b\x05\x06")
-          if eocd != -1:
-              cd_offset = struct.unpack("<I", data[eocd+16:eocd+20])[0]
-              block_size = struct.unpack("<Q", data[cd_offset-24:cd_offset-16])[0]
-              pos = cd_offset - 8 - block_size + 8
-              while pos < cd_offset - 24:
-                  pair_len = struct.unpack("<Q", data[pos:pos+8])[0]
-                  pair_id = struct.unpack("<I", data[pos+8:pos+12])[0]
-                  if pair_id in (0x7109871a, 0xf05368c0):
-                      pdata = data[pos+12:pos+8+pair_len]
-                      signers_len = struct.unpack("<I", pdata[:4])[0]
-                      signer = pdata[4:4+signers_len]
-                      sd_len = struct.unpack("<I", signer[:4])[0]
-                      sd = signer[4:4+sd_len]
-                      d_len = struct.unpack("<I", sd[:4])[0]
-                      certs_len = struct.unpack("<I", sd[4+d_len:8+d_len])[0]
-                      c1_len = struct.unpack("<I", sd[8+d_len:12+d_len])[0]
-                      cert = sd[12+d_len:12+d_len+c1_len]
-                      sha1 = hashlib.sha1(cert).hexdigest().upper()
-                      print(f"HASIL AKHIR SHA-1 APK RILIS: {':'.join(sha1[i:i+2] for i in range(0, len(sha1), 2))}")
-                      break
-                  pos += 8 + pair_len
-          '
+          ls -lh "$OUTPUT_APK"
 
       - name: Unggah Artefak Android
         uses: actions/upload-artifact@v4
