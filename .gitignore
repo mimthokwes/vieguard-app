@@ -52,7 +52,6 @@ android/.kotlin/
 .claude/
 .env
 *.keystore
-android/app/google-services.json
 android/app/release.keystore
 builds/
 output_android/
