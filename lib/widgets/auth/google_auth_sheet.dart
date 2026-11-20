@@ -54,7 +54,6 @@ Future<void> showGoogleAuthSheet(BuildContext context, {String? initialError}) a
     backgroundColor: Colors.transparent,
     builder: (modalCtx) {
       bool isSubmitting = false;
-      bool showCustomInput = false;
 
       return StatefulBuilder(
         builder: (ctx, setModalState) {
@@ -141,10 +140,10 @@ Future<void> showGoogleAuthSheet(BuildContext context, {String? initialError}) a
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Masuk dengan Google', style: serifGold(18)),
+                          Text('Masuk dengan Akun Google', style: serifGold(18)),
                           const SizedBox(height: 2),
                           Text(
-                            'Pilih akun untuk melanjutkan ke Vieguard',
+                            'Masukkan alamat email Google Anda',
                             style: sans(13, color: AuthColors.muted),
                           ),
                         ],
@@ -156,87 +155,41 @@ Future<void> showGoogleAuthSheet(BuildContext context, {String? initialError}) a
                 const Divider(color: Color(0xFF5A0010), thickness: 1),
                 const SizedBox(height: 12),
 
-                // Akun Cepat (Quick Google Accounts)
-                _GoogleAccountTile(
-                  name: 'Admin Vieguard',
-                  email: 'admin.vieguard@gmail.com',
-                  initial: 'A',
-                  color: const Color(0xFF4285F4),
-                  loading: isSubmitting,
-                  onTap: () => doGoogleLogin('admin.vieguard@gmail.com', name: 'Admin Vieguard'),
-                ),
-                const SizedBox(height: 10),
-                _GoogleAccountTile(
-                  name: 'Staff Operational',
-                  email: 'staff.vieguard@gmail.com',
-                  initial: 'S',
-                  color: const Color(0xFF34A853),
-                  loading: isSubmitting,
-                  onTap: () => doGoogleLogin('staff.vieguard@gmail.com', name: 'Staff Operational'),
-                ),
-
-                const SizedBox(height: 14),
-
-                if (!showCustomInput)
-                  TapScale(
-                    onTap: () => setModalState(() => showCustomInput = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AuthColors.border.withValues(alpha: 0.6)),
-                        color: AuthColors.card.withValues(alpha: 0.4),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.person_add_alt_1_rounded, size: 20, color: AuthColors.goldLight),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text('Gunakan Akun Google Lain...', style: sans(14, color: AuthColors.text)),
-                          ),
-                          const Icon(Icons.chevron_right_rounded, size: 20, color: AuthColors.muted),
-                        ],
-                      ),
-                    ),
-                  )
-                else ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AuthColors.border),
-                      color: AuthColors.card.withValues(alpha: 0.6),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Alamat Email Google', style: sans(13, color: AuthColors.goldLight, weight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        AuthField(
-                          controller: emailCtrl,
-                          hint: 'nama@gmail.com',
-                          icon: Icons.mail_outline_rounded,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 12),
-                        Text('Nama Panggilan (Opsional)', style: sans(13, color: AuthColors.goldLight, weight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        AuthField(
-                          controller: nameCtrl,
-                          hint: 'Nama Lengkap',
-                          icon: Icons.badge_outlined,
-                        ),
-                        const SizedBox(height: 16),
-                        GoldButton(
-                          label: 'Lanjutkan dengan Google',
-                          loading: isSubmitting,
-                          onPressed: () => doGoogleLogin(emailCtrl.text, name: nameCtrl.text),
-                        ),
-                      ],
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AuthColors.border),
+                    color: AuthColors.card.withValues(alpha: 0.6),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Alamat Email Google', style: sans(13, color: AuthColors.goldLight, weight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      AuthField(
+                        controller: emailCtrl,
+                        hint: 'nama@gmail.com',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 12),
+                      Text('Nama Lengkap (Opsional)', style: sans(13, color: AuthColors.goldLight, weight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      AuthField(
+                        controller: nameCtrl,
+                        hint: 'Nama Anda',
+                        icon: Icons.badge_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                      GoldButton(
+                        label: 'Lanjutkan Masuk',
+                        loading: isSubmitting,
+                        onPressed: () => doGoogleLogin(emailCtrl.text, name: nameCtrl.text),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Center(
                   child: Text(

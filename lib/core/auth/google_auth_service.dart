@@ -23,56 +23,75 @@ class GoogleAuthResult {
 class GoogleAuthService {
   GoogleAuthService._();
 
-  static GoogleSignIn? _googleSignIn;
-
-  static GoogleSignIn get instance {
-    if (_googleSignIn != null) return _googleSignIn!;
-
-    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP');
-    // Web client ID diperlukan di Android sebagai serverClientId agar Google menerbitkan idToken
-    const webClientId = '964440457881-2h38if1b6eagqvhkicf10bjd9skn6j2p.apps.googleusercontent.com';
-
-    _googleSignIn = GoogleSignIn(
-      scopes: const ['email', 'profile'],
-      serverClientId: webClientId,
-      clientId: (!kIsWeb && Platform.isAndroid) ? null : googleVieApp,
-    );
-
-    return _googleSignIn!;
-  }
+  static const String webClientId = '964440457881-2h38if1b6eagqvhkicf10bjd9skn6j2p.apps.googleusercontent.com';
 
   /// Membuka prompt login Google native (Google Play Services di Android).
+  /// Menggunakan strategi multi-tier: mencoba dengan serverClientId terlebih dahulu
+  /// agar mendapatkan idToken, lalu otomatis fallback ke native Google Sign-In standar
+  /// jika verifikasi serverClientId mengalami kendala di level platform.
   static Future<GoogleAuthResult?> signIn() async {
+    // 1. Percobaan pertama: dengan serverClientId (untuk mendapatkan idToken resmi)
     try {
-      final googleSignIn = instance;
-      if (await googleSignIn.isSignedIn()) {
-        await googleSignIn.signOut();
-      }
-
-      final GoogleSignInAccount? account = await googleSignIn.signIn();
-      if (account == null) {
-        // Pengguna membatalkan dialog login Google
-        return null;
-      }
-
-      final GoogleSignInAuthentication auth = await account.authentication;
-
-      return GoogleAuthResult(
-        idToken: auth.idToken,
-        accessToken: auth.accessToken,
-        email: account.email,
-        name: account.displayName,
-        picture: account.photoUrl,
-      );
+      final res = await _performSignIn(useServerClientId: true);
+      if (res != null) return res;
+      return null; // Pengguna membatalkan dialog
     } catch (e) {
-      debugPrint('[GoogleAuthService] Native Google Sign-In error: $e');
+      debugPrint('[GoogleAuthService] Sign-in dengan serverClientId terkendala: $e. Mencoba fallback native Google Sign-In...');
+    }
+
+    // 2. Percobaan kedua (Fallback): tanpa serverClientId agar dialog akun Google asli di HP tetap muncul
+    try {
+      final res = await _performSignIn(useServerClientId: false);
+      if (res != null) return res;
+      return null; // Pengguna membatalkan dialog
+    } catch (e) {
+      debugPrint('[GoogleAuthService] Fallback native Google Sign-In error: $e');
       rethrow;
     }
   }
 
+  static Future<GoogleAuthResult?> _performSignIn({required bool useServerClientId}) async {
+    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP');
+
+    final googleSignIn = GoogleSignIn(
+      scopes: const ['email', 'profile'],
+      serverClientId: useServerClientId ? webClientId : null,
+      clientId: (!kIsWeb && Platform.isAndroid) ? null : googleVieApp,
+    );
+
+    if (await googleSignIn.isSignedIn()) {
+      await googleSignIn.signOut();
+    }
+
+    final GoogleSignInAccount? account = await googleSignIn.signIn();
+    if (account == null) {
+      // Pengguna membatalkan dialog login Google
+      return null;
+    }
+
+    String? idToken;
+    String? accessToken;
+    try {
+      final GoogleSignInAuthentication auth = await account.authentication;
+      idToken = auth.idToken;
+      accessToken = auth.accessToken;
+    } catch (e) {
+      debugPrint('[GoogleAuthService] Gagal ekstraksi token auth: $e');
+    }
+
+    return GoogleAuthResult(
+      idToken: idToken,
+      accessToken: accessToken,
+      email: account.email,
+      name: account.displayName,
+      picture: account.photoUrl,
+    );
+  }
+
   static Future<void> signOut() async {
     try {
-      await instance.signOut();
+      final googleSignIn = GoogleSignIn(scopes: const ['email', 'profile']);
+      await googleSignIn.signOut();
     } catch (_) {}
   }
 }
