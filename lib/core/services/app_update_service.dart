@@ -72,7 +72,7 @@ class AppUpdateService {
     if (envVersion != null && envVersion.isNotEmpty) {
       return envVersion.replaceFirst(RegExp(r'^[vV]'), '').split('+').first.trim();
     }
-    return '1.2.4';
+    return '1.2.5';
   }
 
   /// Membandingkan apakah versi remote lebih tinggi dibanding versi saat ini

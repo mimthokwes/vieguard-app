@@ -23,49 +23,41 @@ class GoogleAuthResult {
 class GoogleAuthService {
   GoogleAuthService._();
 
-  static const String webClientId = '964440457881-2h38if1b6eagqvhkicf10bjd9skn6j2p.apps.googleusercontent.com';
+  static GoogleSignIn? _googleSignIn;
 
-  /// Membuka prompt login Google native (Google Play Services di Android).
-  /// Menggunakan strategi multi-tier: mencoba dengan serverClientId terlebih dahulu
-  /// agar mendapatkan idToken, lalu otomatis fallback ke native Google Sign-In standar
-  /// jika verifikasi serverClientId mengalami kendala di level platform.
-  static Future<GoogleAuthResult?> signIn() async {
-    // 1. Percobaan pertama: dengan serverClientId (untuk mendapatkan idToken resmi)
-    try {
-      final res = await _performSignIn(useServerClientId: true);
-      if (res != null) return res;
-      return null; // Pengguna membatalkan dialog
-    } catch (e) {
-      debugPrint('[GoogleAuthService] Sign-in dengan serverClientId terkendala: $e. Mencoba fallback native Google Sign-In...');
-    }
+  /// Inisialisasi GoogleSignIn langsung menggunakan Google Play Services bawaan perangkat.
+  /// Tidak membutuhkan serverClientId yang rentan bentrok, dan clientId diatur null di Android.
+  static GoogleSignIn get instance {
+    if (_googleSignIn != null) return _googleSignIn!;
 
-    // 2. Percobaan kedua (Fallback): tanpa serverClientId agar dialog akun Google asli di HP tetap muncul
-    try {
-      final res = await _performSignIn(useServerClientId: false);
-      if (res != null) return res;
-      return null; // Pengguna membatalkan dialog
-    } catch (e) {
-      debugPrint('[GoogleAuthService] Fallback native Google Sign-In error: $e');
-      rethrow;
-    }
-  }
+    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP')?.trim();
 
-  static Future<GoogleAuthResult?> _performSignIn({required bool useServerClientId}) async {
-    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP');
-
-    final googleSignIn = GoogleSignIn(
+    _googleSignIn = GoogleSignIn(
       scopes: const ['email', 'profile'],
-      serverClientId: useServerClientId ? webClientId : null,
       clientId: (!kIsWeb && Platform.isAndroid) ? null : googleVieApp,
     );
 
-    if (await googleSignIn.isSignedIn()) {
-      await googleSignIn.signOut();
+    return _googleSignIn!;
+  }
+
+  /// Membuka dialog native Google Sign-In bawaan perangkat (Google Play Services).
+  /// Mengambil data akun asli pengguna (email, nama lengkap, dan foto profil).
+  static Future<GoogleAuthResult?> signIn() async {
+    final googleSignIn = instance;
+
+    // Reset status login GoogleSignIn sebelumnya agar pengguna selalu disajikan pilihan akun
+    try {
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.signOut();
+      }
+    } catch (e) {
+      debugPrint('[GoogleAuthService] Reset sesi login sebelumnya: $e');
     }
 
+    // Tampilkan dialog pemilihan akun bawaan perangkat
     final GoogleSignInAccount? account = await googleSignIn.signIn();
     if (account == null) {
-      // Pengguna membatalkan dialog login Google
+      // Pengguna membatalkan dialog secara sengaja (menutup dialog)
       return null;
     }
 
@@ -76,7 +68,7 @@ class GoogleAuthService {
       idToken = auth.idToken;
       accessToken = auth.accessToken;
     } catch (e) {
-      debugPrint('[GoogleAuthService] Gagal ekstraksi token auth: $e');
+      debugPrint('[GoogleAuthService] Ekstraksi token auth opsional dilewati: $e');
     }
 
     return GoogleAuthResult(
@@ -90,8 +82,7 @@ class GoogleAuthService {
 
   static Future<void> signOut() async {
     try {
-      final googleSignIn = GoogleSignIn(scopes: const ['email', 'profile']);
-      await googleSignIn.signOut();
+      await instance.signOut();
     } catch (_) {}
   }
 }
