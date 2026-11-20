@@ -250,6 +250,6 @@ jobs:
             echo "Membuat tag baru dan release untuk $TAG_NAME..."
             gh release create "$TAG_NAME" release_assets/* \
               --title "Vieguard $TAG_NAME" \
-              --notes "Rilis otomatis Vieguard versi $TAG_NAME dari branch $GITHUB_REF_NAME." \
+              --notes "Vieguard $TAG_NAME menghadirkan fitur pemeriksaan pembaruan otomatis (in-app update) saat aplikasi pertama kali dibuka dengan pembersihan berkas instalasi lama secara otomatis, perbaikan validasi pengiriman data produk pembelian dan sewa ke backend, serta pemeliharaan stabilitas penuh autentikasi Google Sign-In dan notifikasi push FCM." \
               $IS_PRERELEASE
           fi
