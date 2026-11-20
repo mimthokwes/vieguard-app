@@ -37,16 +37,14 @@ Future<void> main() async {
     debugPrint('[Main] Gagal inisialisasi date formatting: $e');
   }
 
-  try {
-    await LocalNotificationService.initialize();
-  } catch (e) {
-    debugPrint('[Main] Gagal inisialisasi LocalNotification: $e');
-  }
-
   final tokenStorage = TokenStorage();
   final apiClient = ApiClient(tokenStorage: tokenStorage);
 
-  // Jalankan inisialisasi FCM di latar belakang agar tidak memblokir launch aplikasi
+  // Jalankan inisialisasi notifikasi lokal & FCM di latar belakang agar tidak memblokir launch aplikasi
+  LocalNotificationService.initialize().catchError((e) {
+    debugPrint('[Main] LocalNotification background init error: $e');
+  });
+
   FcmService.initialize(apiClient: apiClient).catchError((e) {
     debugPrint('[Main] FCM background init error: $e');
   });
