@@ -41,7 +41,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
         if (mounted) _refresh(force: false);
       });
 
-      // Cek pembaruan aplikasi secara berkala dari GitHub Releases saat membuka Dashboard
+      // Cek pembaruan aplikasi hanya 1 kali saat aplikasi pertama kali dibuka
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
           AppUpdateService.checkForUpdateOnBeranda(context);
