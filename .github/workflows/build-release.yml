@@ -59,6 +59,13 @@ jobs:
           echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
           echo "Versi Android: $VERSION_NAME+$BUILD_NUM"
 
+      - name: Sinkronkan Versi Aplikasi ke .env
+        run: |
+          sed -i '/^APP_VERSION=/d' .env 2>/dev/null || true
+          echo "APP_VERSION=v${{ env.VERSION_NAME }}" >> .env
+          echo "Sinkronisasi file .env selesai:"
+          grep '^APP_VERSION=' .env
+
       - name: Siapkan Google Services JSON
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
@@ -147,6 +154,13 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
           echo "Versi iOS: $VERSION_NAME+$BUILD_NUM"
+
+      - name: Sinkronkan Versi Aplikasi ke .env
+        run: |
+          sed -i '/^APP_VERSION=/d' .env 2>/dev/null || true
+          echo "APP_VERSION=v${{ env.VERSION_NAME }}" >> .env
+          echo "Sinkronisasi file .env selesai:"
+          grep '^APP_VERSION=' .env
 
       - name: Ambil Dependensi Flutter
         run: flutter pub get
