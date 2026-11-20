@@ -24,30 +24,15 @@ import 'widgets/common/vg_alert.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('[Main] Gagal memuat .env: $e');
-  }
-
-  try {
-    await initializeDateFormatting('id_ID', null);
-  } catch (e) {
-    debugPrint('[Main] Gagal inisialisasi date formatting: $e');
-  }
+  await dotenv.load(fileName: '.env');
+  await initializeDateFormatting('id_ID', null);
+  await LocalNotificationService.initialize();
 
   final tokenStorage = TokenStorage();
   final apiClient = ApiClient(tokenStorage: tokenStorage);
 
-  // Jalankan inisialisasi notifikasi lokal & FCM di latar belakang agar tidak memblokir launch aplikasi
-  LocalNotificationService.initialize().catchError((e) {
-    debugPrint('[Main] LocalNotification background init error: $e');
-  });
-
-  FcmService.initialize(apiClient: apiClient).catchError((e) {
-    debugPrint('[Main] FCM background init error: $e');
-  });
+  // Inisialisasi Firebase Cloud Messaging untuk push notification saat app mati / standby
+  await FcmService.initialize(apiClient: apiClient);
 
   runApp(VieguardApp(apiClient: apiClient, tokenStorage: tokenStorage));
 }

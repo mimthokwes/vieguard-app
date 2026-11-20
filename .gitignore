@@ -31,10 +31,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/builds/
-*.apk
-*.aab
-*.ipa
 /coverage/
 
 # Symbolication related
@@ -50,12 +46,13 @@ app.*.map.json
 .kotlin/
 android/.kotlin/
 
-# Firebase configuration files
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-
 # Widget Preview related
 .widget_preview/
 .claude
 .claude/
 .env
+*.keystore
+android/app/google-services.json
+android/app/release.keystore
+builds/
+output_android/

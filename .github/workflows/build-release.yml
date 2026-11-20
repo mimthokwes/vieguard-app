@@ -3,6 +3,7 @@ name: Build and Release Mobile Apps
 on:
   push:
     branches:
+      - v1.2.5-pre-release
       - main
   workflow_dispatch:
 
@@ -63,7 +64,7 @@ jobs:
         run: |
           sed -i '/^APP_VERSION=/d' .env 2>/dev/null || true
           echo "APP_VERSION=v${{ env.VERSION_NAME }}" >> .env
-          echo "Sinkronisasi file .env selesai:"
+          echo "Sinkronisasi file .env selesai. Isi APP_VERSION:"
           grep '^APP_VERSION=' .env
 
       - name: Siapkan Google Services JSON
@@ -72,8 +73,9 @@ jobs:
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-            echo "google-services.json berhasil disinkronkan. Client ID terdaftar:"
-            grep -rn "client_id" android/app/google-services.json || true
+            echo "Google Services JSON berhasil disinkronkan."
+          else
+            echo "PERINGATAN: GOOGLE_SERVICES_JSON tidak ditemukan di Secrets!"
           fi
 
       - name: Siapkan Android Keystore
@@ -82,11 +84,12 @@ jobs:
         run: |
           mkdir -p ~/.android
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > ~/.android/debug.keystore
-            echo "Android debug keystore berhasil disinkronkan:"
-            ls -lh ~/.android/debug.keystore
-            echo "Verifikasi Sidik Jari Keystore yang Digunakan:"
-            keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:"
+            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > android/app/release.keystore
+            cp android/app/release.keystore ~/.android/debug.keystore
+            echo "Android release keystore berhasil disinkronkan ke android/app/release.keystore:"
+            ls -lh android/app/release.keystore
+            echo "Sidik Jari SHA-1 Keystore yang Digunakan:"
+            keytool -list -v -keystore android/app/release.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:"
           else
             echo "PERINGATAN: KEYSTORE_BASE64 tidak ditemukan!"
           fi
@@ -164,9 +167,9 @@ jobs:
 
       - name: Sinkronkan Versi Aplikasi ke .env
         run: |
-          sed -i '/^APP_VERSION=/d' .env 2>/dev/null || true
+          sed -i '' '/^APP_VERSION=/d' .env 2>/dev/null || true
           echo "APP_VERSION=v${{ env.VERSION_NAME }}" >> .env
-          echo "Sinkronisasi file .env selesai:"
+          echo "Sinkronisasi file .env selesai. Isi APP_VERSION:"
           grep '^APP_VERSION=' .env
 
       - name: Ambil Dependensi Flutter
@@ -234,6 +237,12 @@ jobs:
           echo "Daftar file rilis yang siap diunggah:"
           ls -lh release_assets/
 
+          IS_PRERELEASE=""
+          if [[ "$TAG_NAME" == *"pre-release"* ]] || [[ "$TAG_NAME" == *"beta"* ]] || [[ "$TAG_NAME" == *"alpha"* ]] || [[ "$TAG_NAME" == *"rc"* ]]; then
+            IS_PRERELEASE="--prerelease"
+            echo "Menandai rilis ini sebagai Pre-release: $IS_PRERELEASE"
+          fi
+
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             echo "Release $TAG_NAME sudah ada. Memperbarui berkas aset rilis..."
             gh release upload "$TAG_NAME" release_assets/* --clobber
@@ -241,5 +250,6 @@ jobs:
             echo "Membuat tag baru dan release untuk $TAG_NAME..."
             gh release create "$TAG_NAME" release_assets/* \
               --title "Vieguard $TAG_NAME" \
-              --notes "Rilis otomatis Vieguard versi $TAG_NAME dari branch main."
+              --notes "Vieguard $TAG_NAME menghadirkan fitur pemeriksaan pembaruan otomatis (in-app update) saat aplikasi pertama kali dibuka dengan pembersihan berkas instalasi lama secara otomatis, perbaikan validasi pengiriman data produk pembelian dan sewa ke backend, serta pemeliharaan stabilitas penuh autentikasi Google Sign-In dan notifikasi push FCM." \
+              $IS_PRERELEASE
           fi

@@ -29,8 +29,9 @@ class GithubReleaseInfo {
   });
 
   factory GithubReleaseInfo.fromJson(Map<String, dynamic> json) {
-    final tagName = json['tag_name'] as String? ?? '';
-    final version = tagName.replaceFirst(RegExp(r'^[vV]'), '').split('+').first;
+    final tagName = (json['tag_name'] as String? ?? '').trim();
+    final rawVersion = tagName.replaceFirst(RegExp(r'^[vV]'), '');
+    final version = rawVersion.split('+').first;
     final assets = (json['assets'] as List<dynamic>?) ?? [];
 
     String? apkUrl;
@@ -72,14 +73,23 @@ class AppUpdateService {
     if (envVersion != null && envVersion.isNotEmpty) {
       return envVersion.replaceFirst(RegExp(r'^[vV]'), '').split('+').first.trim();
     }
-    return '1.2.5';
+    return '1.1.2';
   }
 
-  /// Membandingkan apakah versi remote lebih tinggi dibanding versi saat ini
+  /// Membandingkan apakah versi remote lebih baru dibandingkan versi saat ini
   static bool isNewerVersion(String latest, String current) {
     try {
-      final lParts = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-      final cParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final cleanLatest = latest.replaceFirst(RegExp(r'^[vV]'), '').trim();
+      final cleanCurrent = current.replaceFirst(RegExp(r'^[vV]'), '').trim();
+
+      final baseLatest = cleanLatest.split('+').first;
+      final baseCurrent = cleanCurrent.split('+').first;
+
+      final latestMain = baseLatest.split('-').first;
+      final currentMain = baseCurrent.split('-').first;
+
+      final lParts = latestMain.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final cParts = currentMain.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
       while (lParts.length < 3) {
         lParts.add(0);
@@ -92,13 +102,22 @@ class AppUpdateService {
         if (lParts[i] > cParts[i]) return true;
         if (lParts[i] < cParts[i]) return false;
       }
+
+      // Jika nomor mayor.minor.patch sama:
+      // Versi rilis stabil lebih baru daripada versi pre-release
+      final isCurrentPre = baseCurrent.contains('-');
+      final isLatestPre = baseLatest.contains('-');
+      if (isCurrentPre && !isLatestPre) {
+        return true;
+      }
+
       return false;
     } catch (_) {
       return false;
     }
   }
 
-  /// Menghapus file instalasi .apk / .ipa lama dari direktori cache aplikasi
+  /// Menghapus file instalasi .apk / .ipa lama dari direktori cache aplikasi agar tidak menumpuk
   static Future<void> cleanupOldUpdateFiles() async {
     try {
       final tempDir = await getTemporaryDirectory();
@@ -110,13 +129,13 @@ class AppUpdateService {
             final lower = entity.path.toLowerCase();
             if (lower.endsWith('.apk') || lower.endsWith('.ipa')) {
               await entity.delete();
-              debugPrint('[AppUpdate] File lama dibersihkan: ${entity.path}');
+              debugPrint('[AppUpdate] Berkas instalasi lama dihapus: ${entity.path}');
             }
           }
         }
       }
     } catch (e) {
-      debugPrint('[AppUpdate] Gagal membersihkan file lama: $e');
+      debugPrint('[AppUpdate] Gagal membersihkan berkas lama: $e');
     }
   }
 
@@ -144,12 +163,12 @@ class AppUpdateService {
     return null;
   }
 
-  /// Pengecekan pembaruan otomatis saat masuk ke halaman beranda
+  /// Pengecekan pembaruan saat pertama kali masuk ke dashboard / beranda
   static Future<void> checkForUpdateOnBeranda(BuildContext context, {bool force = false}) async {
     if (_hasCheckedThisSession && !force) return;
     _hasCheckedThisSession = true;
 
-    // Bersihkan berkas unduhan lama secara otomatis agar memori tetap bersih
+    // Bersihkan berkas unduhan lama secara otomatis saat startup
     await cleanupOldUpdateFiles();
 
     final release = await fetchLatestRelease();
@@ -163,7 +182,7 @@ class AppUpdateService {
     }
   }
 
-  /// Menampilkan popup dialog pembaruan minimalis dan to-the-point
+  /// Menampilkan popup dialog pembaruan
   static void showUpdateDialog(
     BuildContext context, {
     required GithubReleaseInfo release,
@@ -189,7 +208,7 @@ class AppUpdateService {
                 elevation: 6,
                 insetPadding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -206,59 +225,41 @@ class AppUpdateService {
                       ),
                       const SizedBox(height: 16),
 
-                      // Informasi Versi Saat Ini dan Versi Terbaru
+                      // Baris Versi Saat Ini -> Versi Terbaru
                       if (!isDownloading) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             color: AppColors.background,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.border),
                           ),
-                          child: Column(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Versi saat ini',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'v$currentVersion',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                'v$currentVersion',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                              const Divider(height: 16, thickness: 1, color: AppColors.border),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Versi terbaru',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'v${release.version}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ],
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              Text(
+                                'v${release.version}',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ],
                           ),
@@ -282,7 +283,7 @@ class AppUpdateService {
                               child: LinearProgressIndicator(
                                 value: progress > 0 ? progress : null,
                                 minHeight: 7,
-                                backgroundColor: AppColors.gold.withOpacity(0.25),
+                                backgroundColor: AppColors.border,
                                 color: AppColors.primary,
                               ),
                             ),
@@ -301,13 +302,13 @@ class AppUpdateService {
                           ],
                         ),
                       ],
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
 
                       // Tombol Aksi
                       if (!isDownloading) ...[
                         Row(
                           children: [
-                            // Tombol Lewati (Text biasa, button transparan)
+                            // Tombol Lewati di sebelah kiri (Text button murni tanpa background)
                             Expanded(
                               child: TextButton(
                                 onPressed: () {
@@ -324,13 +325,13 @@ class AppUpdateService {
                                   'Lewati',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            // Tombol Perbaharui (Warna merah, teks emas)
+                            const SizedBox(width: 12),
+                            // Tombol Perbaharui di sebelah kanan (Warna maroon VieGuard, teks putih)
                             Expanded(
                               flex: 2,
                               child: ElevatedButton(
@@ -373,9 +374,9 @@ class AppUpdateService {
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary, // Merah khas Vieguard
-                                  foregroundColor: AppColors.gold,   // Teks Emas khas Vieguard
-                                  elevation: 1,
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -386,6 +387,7 @@ class AppUpdateService {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
@@ -413,7 +415,7 @@ class AppUpdateService {
     required VoidCallback onComplete,
   }) async {
     try {
-      // 1. Bersihkan sisa berkas rilis lama sebelum memulai
+      // 1. Hapus berkas instalasi lama sebelum memulai unduhan baru
       await cleanupOldUpdateFiles();
 
       // 2. Siapkan direktori penyimpanan lokal sementara
@@ -428,7 +430,7 @@ class AppUpdateService {
           : 'vieguard_v$version.apk';
       final savePath = '${updateDir.path}/$fileName';
 
-      // 3. Unduh berkas dari GitHub Releases
+      // 3. Unduh berkas pembaruan dari GitHub Releases
       final dio = Dio();
       await dio.download(
         downloadUrl,
@@ -440,15 +442,12 @@ class AppUpdateService {
         },
       );
 
-      // 4. Proses Instalasi Mandiri
+      // 4. Proses Instalasi APK untuk Android
       if (defaultTargetPlatform == TargetPlatform.android) {
         if (await Permission.requestInstallPackages.isDenied) {
           await Permission.requestInstallPackages.request();
         }
 
-        // Membuka installer Android bawaan.
-        // Sistem OS Android memperbarui paket aplikasi tanpa menghapus
-        // SecureStorage, SharedPreferences, atau sesi login yang tersimpan.
         final openResult = await OpenFilex.open(
           savePath,
           type: 'application/vnd.android.package-archive',

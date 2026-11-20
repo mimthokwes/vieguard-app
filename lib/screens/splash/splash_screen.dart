@@ -99,13 +99,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         widget.onFinished?.call();
       }
     });
-
-    // Fallback timer jika sistem menonaktifkan animasi (hemat daya / aksesibilitas)
-    Future.delayed(const Duration(milliseconds: 2400), () {
-      if (mounted) {
-        widget.onFinished?.call();
-      }
-    });
   }
 
   @override

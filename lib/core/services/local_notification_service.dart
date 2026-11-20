@@ -28,68 +28,64 @@ class LocalNotificationService {
   /// Inisialisasi awal notifikasi sistem
   static Future<void> initialize({void Function(String? payload)? onTap}) async {
     if (_isInitialized) return;
-    try {
-      onNotificationTapped = onTap;
+    onNotificationTapped = onTap;
 
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const iosSettings = DarwinInitializationSettings(
-        requestAlertPermission: false, // Diminta via onboarding permission dialog
-        requestBadgePermission: false,
-        requestSoundPermission: false,
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false, // Diminta via onboarding permission dialog
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _plugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        onNotificationTapped?.call(response.payload);
+      },
+    );
+
+    // Daftarkan Channel Android untuk prioritas tinggi & suara/getar
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelOrdersId,
+          channelOrdersName,
+          description: channelOrdersDesc,
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
       );
-
-      const initSettings = InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelChatId,
+          channelChatName,
+          description: channelChatDesc,
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
       );
-
-      await _plugin.initialize(
-        initSettings,
-        onDidReceiveNotificationResponse: (response) {
-          onNotificationTapped?.call(response.payload);
-        },
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelGeneralId,
+          channelGeneralName,
+          description: channelGeneralDesc,
+          importance: Importance.defaultImportance,
+          playSound: true,
+          enableVibration: true,
+        ),
       );
-
-      // Daftarkan Channel Android untuk prioritas tinggi & suara/getar
-      final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      if (androidImpl != null) {
-        await androidImpl.createNotificationChannel(
-          const AndroidNotificationChannel(
-            channelOrdersId,
-            channelOrdersName,
-            description: channelOrdersDesc,
-            importance: Importance.max,
-            playSound: true,
-            enableVibration: true,
-          ),
-        );
-        await androidImpl.createNotificationChannel(
-          const AndroidNotificationChannel(
-            channelChatId,
-            channelChatName,
-            description: channelChatDesc,
-            importance: Importance.max,
-            playSound: true,
-            enableVibration: true,
-          ),
-        );
-        await androidImpl.createNotificationChannel(
-          const AndroidNotificationChannel(
-            channelGeneralId,
-            channelGeneralName,
-            description: channelGeneralDesc,
-            importance: Importance.defaultImportance,
-            playSound: true,
-            enableVibration: true,
-          ),
-        );
-      }
-
-      _isInitialized = true;
-      debugPrint('LocalNotificationService: Inisialisasi notifikasi berhasil.');
-    } catch (e, stack) {
-      debugPrint('[LocalNotificationService] Inisialisasi notifikasi gagal: $e\n$stack');
     }
+
+    _isInitialized = true;
+    debugPrint('LocalNotificationService: Inisialisasi notifikasi berhasil.');
   }
 
   /// Tampilkan notifikasi umum

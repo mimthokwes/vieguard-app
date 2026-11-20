@@ -25,60 +25,49 @@ class GoogleAuthService {
 
   static GoogleSignIn? _googleSignIn;
 
-  /// Inisialisasi GoogleSignIn langsung menggunakan Google Play Services bawaan perangkat.
-  /// Tidak membutuhkan serverClientId yang rentan bentrok, dan clientId diatur null di Android.
   static GoogleSignIn get instance {
     if (_googleSignIn != null) return _googleSignIn!;
 
-    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP')?.trim();
+    final googleVieApp = dotenv.maybeGet('GOOGLE_VIE_APP');
+    // Web client ID diperlukan di Android sebagai serverClientId agar Google menerbitkan idToken
+    const webClientId = '964440457881-2h38if1b6eagqvhkicf10bjd9skn6j2p.apps.googleusercontent.com';
 
     _googleSignIn = GoogleSignIn(
       scopes: const ['email', 'profile'],
-      serverClientId: (googleVieApp != null && googleVieApp.isNotEmpty) ? googleVieApp : null,
+      serverClientId: webClientId,
       clientId: (!kIsWeb && Platform.isAndroid) ? null : googleVieApp,
     );
 
     return _googleSignIn!;
   }
 
-  /// Membuka dialog native Google Sign-In bawaan perangkat (Google Play Services).
-  /// Mengambil data akun asli pengguna (email, nama lengkap, dan foto profil).
+  /// Membuka prompt login Google native (Google Play Services di Android).
   static Future<GoogleAuthResult?> signIn() async {
-    final googleSignIn = instance;
-
-    // Reset status login GoogleSignIn sebelumnya agar pengguna selalu disajikan pilihan akun
     try {
+      final googleSignIn = instance;
       if (await googleSignIn.isSignedIn()) {
         await googleSignIn.signOut();
       }
-    } catch (e) {
-      debugPrint('[GoogleAuthService] Reset sesi login sebelumnya: $e');
-    }
 
-    // Tampilkan dialog pemilihan akun bawaan perangkat
-    final GoogleSignInAccount? account = await googleSignIn.signIn();
-    if (account == null) {
-      // Pengguna membatalkan dialog secara sengaja (menutup dialog)
-      return null;
-    }
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      if (account == null) {
+        // Pengguna membatalkan dialog login Google
+        return null;
+      }
 
-    String? idToken;
-    String? accessToken;
-    try {
       final GoogleSignInAuthentication auth = await account.authentication;
-      idToken = auth.idToken;
-      accessToken = auth.accessToken;
-    } catch (e) {
-      debugPrint('[GoogleAuthService] Ekstraksi token auth opsional dilewati: $e');
-    }
 
-    return GoogleAuthResult(
-      idToken: idToken,
-      accessToken: accessToken,
-      email: account.email,
-      name: account.displayName,
-      picture: account.photoUrl,
-    );
+      return GoogleAuthResult(
+        idToken: auth.idToken,
+        accessToken: auth.accessToken,
+        email: account.email,
+        name: account.displayName,
+        picture: account.photoUrl,
+      );
+    } catch (e) {
+      debugPrint('[GoogleAuthService] Native Google Sign-In error: $e');
+      rethrow;
+    }
   }
 
   static Future<void> signOut() async {

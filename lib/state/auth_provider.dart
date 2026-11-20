@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/api_exception.dart';
-import '../core/services/fcm_service.dart';
 import '../core/storage/cache_storage.dart';
 import '../core/storage/image_cache_service.dart';
 import '../core/storage/token_storage.dart';
@@ -31,7 +30,7 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
     try {
-      final data = await apiClient.get('/account/me').timeout(const Duration(seconds: 5));
+      final data = await apiClient.get('/account/me');
       var admin = Admin.fromJson(data as Map<String, dynamic>);
       final savedPhoto = await tokenStorage.readAdminPhoto();
       if ((admin.profilePhoto == null || admin.profilePhoto!.isEmpty) && savedPhoto != null) {
@@ -41,9 +40,6 @@ class AuthProvider extends ChangeNotifier {
       status = AuthStatus.authenticated;
     } on ApiException {
       await tokenStorage.clear();
-      status = AuthStatus.unauthenticated;
-    } catch (e) {
-      debugPrint('[Auth] Gagal auto-login (koneksi/timeout): $e');
       status = AuthStatus.unauthenticated;
     }
     notifyListeners();
@@ -58,7 +54,6 @@ class AuthProvider extends ChangeNotifier {
       currentAdmin = Admin.fromJson(data['admin'] as Map<String, dynamic>);
       await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
       status = AuthStatus.authenticated;
-      FcmService.syncTokenWithBackend(apiClient);
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
@@ -88,7 +83,6 @@ class AuthProvider extends ChangeNotifier {
       currentAdmin = Admin.fromJson(data['admin'] as Map<String, dynamic>);
       await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
       status = AuthStatus.authenticated;
-      FcmService.syncTokenWithBackend(apiClient);
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
@@ -128,7 +122,6 @@ class AuthProvider extends ChangeNotifier {
       currentAdmin = admin;
       await tokenStorage.save(accessToken: data['accessToken'] as String, refreshToken: data['refreshToken'] as String);
       status = AuthStatus.authenticated;
-      FcmService.syncTokenWithBackend(apiClient);
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
@@ -191,7 +184,6 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     final refreshToken = await tokenStorage.readRefreshToken();
     try {
-      await FcmService.unregisterToken(apiClient);
       await apiClient.post('/auth/logout', data: {'refreshToken': refreshToken});
     } catch (_) {
       // ignore network errors on logout

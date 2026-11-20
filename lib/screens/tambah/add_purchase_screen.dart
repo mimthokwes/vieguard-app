@@ -144,9 +144,7 @@ class _AddPurchaseItemScreenState extends State<AddPurchaseItemScreen> {
       'categoryId': _categoryId,
       'name': _name.text.trim(),
       if (_description.text.trim().isNotEmpty) 'description': _description.text.trim(),
-      'basePriceBuy': _num(_priceBuy),
-      // stockRent = 0 karena ini barang beli
-      'basePriceRent': null,
+      if (_num(_priceBuy) != null) 'basePriceBuy': _num(_priceBuy),
       'isVisible': _visible,
       'isCustomAvailable': _custom,
       if (_sku.text.trim().isNotEmpty) 'sku': _sku.text.trim().toUpperCase(),

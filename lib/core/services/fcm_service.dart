@@ -127,11 +127,6 @@ class FcmService {
   /// Kirim token FCM ke backend API
   static Future<void> sendTokenToBackend(ApiClient apiClient, String fcmToken) async {
     try {
-      final accessToken = await apiClient.tokenStorage.readAccessToken();
-      if (accessToken == null || accessToken.isEmpty) {
-        debugPrint('[FCM] Pengguna belum login, sinkronisasi token FCM ke backend ditunda.');
-        return;
-      }
       await apiClient.post('/auth/fcm-token', data: {'token': fcmToken});
       debugPrint('[FCM] Token perangkat berhasil disinkronkan ke backend.');
     } catch (e) {
@@ -142,8 +137,6 @@ class FcmService {
   /// Hapus token saat admin logout
   static Future<void> unregisterToken(ApiClient apiClient) async {
     try {
-      final accessToken = await apiClient.tokenStorage.readAccessToken();
-      if (accessToken == null || accessToken.isEmpty) return;
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await apiClient.delete('/auth/fcm-token');

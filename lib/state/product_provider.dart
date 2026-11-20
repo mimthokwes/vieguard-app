@@ -133,7 +133,9 @@ class ProductProvider extends ChangeNotifier {
 
   Future<Product?> createProduct(Map<String, dynamic> data, List<XFile> photos) async {
     try {
-      final created = await apiClient.post('/products', data: data);
+      final cleanData = Map<String, dynamic>.from(data)
+        ..removeWhere((key, value) => value == null);
+      final created = await apiClient.post('/products', data: cleanData);
       final id = (created as Map<String, dynamic>)['id'].toString();
       if (photos.isNotEmpty) {
         final form = FormData();

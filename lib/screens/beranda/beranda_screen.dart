@@ -35,13 +35,17 @@ class _BerandaScreenState extends State<BerandaScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Cek pembaruan aplikasi secara otomatis saat membuka halaman beranda
-      AppUpdateService.checkForUpdateOnBeranda(context);
-
       // Berikan jeda 350ms agar animasi transisi masuk halaman selesai mulus 60fps
       // sebelum menjalankan 5 request API paralel di background.
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted) _refresh(force: false);
+      });
+
+      // Cek pembaruan aplikasi hanya 1 kali saat aplikasi pertama kali dibuka
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          AppUpdateService.checkForUpdateOnBeranda(context);
+        }
       });
     });
   }
