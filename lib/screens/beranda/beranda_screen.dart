@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/app_update_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
@@ -38,6 +39,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
       // sebelum menjalankan 5 request API paralel di background.
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted) _refresh(force: false);
+      });
+
+      // Cek pembaruan aplikasi secara berkala dari GitHub Releases saat membuka Dashboard
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          AppUpdateService.checkForUpdateOnBeranda(context);
+        }
       });
     });
   }
