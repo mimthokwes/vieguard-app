@@ -34,6 +34,7 @@ class GoogleAuthService {
 
     _googleSignIn = GoogleSignIn(
       scopes: const ['email', 'profile'],
+      serverClientId: (googleVieApp != null && googleVieApp.isNotEmpty) ? googleVieApp : null,
       clientId: (!kIsWeb && Platform.isAndroid) ? null : googleVieApp,
     );
 
