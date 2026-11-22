@@ -104,7 +104,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   const SizedBox(height: 26),
                   const VgSectionHeader(title: 'Ringkasan Hari Ini'),
                   _Ringkasan(
-                    pesananBaru: orders.perluTindakanCount,
+                    pesananAktif: orders.pesananAktifCount,
                     kostumDisewa: rentedUnits,
                     modelDisewa: activeModels,
                     progres: orders.progresProduksiRata,
@@ -254,7 +254,7 @@ class _WelcomeBanner extends StatelessWidget {
 }
 
 class _Ringkasan extends StatelessWidget {
-  final int pesananBaru;
+  final int pesananAktif;
   final int kostumDisewa;
   final int modelDisewa;
   final double progres;
@@ -264,7 +264,7 @@ class _Ringkasan extends StatelessWidget {
   final VoidCallback onSewa;
 
   const _Ringkasan({
-    required this.pesananBaru,
+    required this.pesananAktif,
     required this.kostumDisewa,
     required this.modelDisewa,
     required this.progres,
@@ -295,11 +295,11 @@ class _Ringkasan extends StatelessWidget {
               decoration: _box,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Row(children: [
-                  Expanded(child: Text('Pesanan Baru', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                  Expanded(child: Text('Pesanan Aktif', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
                   VgIconBadge(icon: Icons.receipt_long_rounded, size: 28, color: AppColors.info, background: AppColors.infoBg, circle: true),
                 ]),
                 const Spacer(),
-                Text('$pesananBaru', style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1)),
+                Text('$pesananAktif', style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1)),
                 const SizedBox(height: 8),
                 const Text('Pesanan saat ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               ]),

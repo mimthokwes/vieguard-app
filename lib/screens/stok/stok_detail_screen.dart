@@ -527,52 +527,58 @@ class _StokDetailScreenState extends State<StokDetailScreen> {
                     ),
               ]),
             ),
+          const SizedBox(height: 20),
+
+          // ── Pengaturan Visibilitas & Hapus Produk (Di paling bawah konten) ────
+          VgCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const VgCardTitle(
+                title: 'Pengaturan Visibilitas & Katalog',
+                subtitle: 'Atur penayangan produk atau nonaktifkan dari sistem',
+              ),
+              VgButton(
+                label: product.isVisible ? 'Sembunyikan dari Katalog' : 'Tampilkan di Katalog',
+                icon: product.isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                style: VgButtonStyle.soft,
+                expanded: true,
+                height: 46,
+                onPressed: () => _toggleVisibility(product),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.dangerBg,
+                  foregroundColor: AppColors.danger,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  ),
+                  minimumSize: const Size(double.infinity, 46),
+                ),
+                onPressed: _deleting ? null : () => _confirmDelete(product),
+                child: _deleting
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.danger))
+                    : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+                        SizedBox(width: 8),
+                        Text('Hapus Produk', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.danger)),
+                      ]),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
 
-      // ── Tombol Aksi di Bottom Bar ───────────────────────────────────────────
+      // ── Tombol Sticky di Bottom Bar (Hanya Update Status & Stok Unit) ────────
       bottomNavigationBar: VgBottomBar(children: [
-        // 1. Tombol Update Status & Stok Unit (Tetap dipertahankan)
         VgButton(
           label: 'Update Status & Stok Unit',
           icon: Icons.edit_note_rounded,
           expanded: true,
           height: 48,
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StockAdjustScreen(productId: product.id))),
-        ),
-        const SizedBox(height: 8),
-
-        // 2. Tombol Sembunyikan / Tampilkan di Katalog (Di atas tombol hapus)
-        VgButton(
-          label: product.isVisible ? 'Sembunyikan dari Katalog' : 'Tampilkan di Katalog',
-          icon: product.isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-          style: VgButtonStyle.soft,
-          expanded: true,
-          height: 44,
-          onPressed: () => _toggleVisibility(product),
-        ),
-        const SizedBox(height: 8),
-
-        // 3. Tombol Hapus Produk
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.dangerBg,
-            foregroundColor: AppColors.danger,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFFFCA5A5)),
-            ),
-            minimumSize: const Size(double.infinity, 44),
-          ),
-          onPressed: _deleting ? null : () => _confirmDelete(product),
-          child: _deleting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.danger))
-              : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
-                  SizedBox(width: 8),
-                  Text('Hapus Produk', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.danger)),
-                ]),
         ),
         const SizedBox(height: 6),
       ]),

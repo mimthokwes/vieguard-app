@@ -51,6 +51,13 @@ class OrderProvider extends ChangeNotifier {
 
   int get perluTindakanCount => _orders.where((o) => o.butuhTindakan).length;
 
+  int get pesananAktifCount => _orders
+      .where((o) =>
+          o.status == OrderStatus.dikonfirmasi ||
+          o.status == OrderStatus.diproses ||
+          o.status == OrderStatus.siapDiambil)
+      .length;
+
   int countByStatus(OrderStatus status) => _orders.where((o) => o.status == status).length;
 
   int countByType(OrderType type) => _orders.where((o) => o.orderType == type).length;

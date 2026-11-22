@@ -317,7 +317,7 @@ class _CustomerCard extends StatelessWidget {
       const SizedBox(width: 8),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(custom ? 'WhatsApp / Telepon' : 'WhatsApp PIC', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
+          const Text('WhatsApp', style: TextStyle(fontSize: 12, color: AppColors.primary)),
           Text(c.phone ?? '-', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
         ]),
       ),
@@ -325,11 +325,15 @@ class _CustomerCard extends StatelessWidget {
     ]);
 
     final rows = <Widget>[
-      _InfoRow(icon: custom ? Icons.account_balance_outlined : Icons.school_outlined, label: custom ? 'Institusi Pemesan' : 'Institusi / Sekolah', value: c.name),
-      if (c.email != null) _InfoRow(icon: Icons.person_outline_rounded, label: 'Email Penanggung Jawab', value: c.email!),
+      _InfoRow(icon: Icons.person_outline_rounded, label: 'Nama', value: c.name),
+      if (c.email != null && c.email!.isNotEmpty)
+        _InfoRow(icon: Icons.mail_outline_rounded, label: 'Email', value: c.email!),
+      _InfoRow(
+        icon: Icons.location_on_outlined,
+        label: 'Alamat',
+        value: (c.address != null && c.address!.isNotEmpty) ? c.address! : '-',
+      ),
       custom ? phoneRow : VgInset(padding: const EdgeInsets.fromLTRB(10, 10, 10, 10), child: phoneRow),
-      if (c.address != null && c.address!.isNotEmpty)
-        _InfoRow(icon: custom ? Icons.location_on_outlined : Icons.local_shipping_outlined, label: custom ? 'Alamat Pengiriman' : 'Alamat Tujuan Pengiriman', value: c.address!),
     ];
 
     return VgCard(
