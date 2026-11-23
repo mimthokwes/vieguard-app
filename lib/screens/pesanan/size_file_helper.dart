@@ -28,7 +28,7 @@ Future<void> downloadCustomerSizeExcel({
     ];
     await Clipboard.setData(ClipboardData(text: lines.join('\n')));
     messenger.showSnackBar(
-      const SnackBar(content: Text('Data ukuran siswa disalin ke clipboard.')),
+      const SnackBar(content: Text('Data ukuran disalin ke clipboard.')),
     );
     return;
   }

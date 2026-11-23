@@ -77,8 +77,8 @@ class _DetailPesananScreenState extends State<DetailPesananScreen> {
             order.isCustom ? _CustomHeader(order: order) : _StandardHeader(order: order),
             _CustomerCard(order: order, custom: order.isCustom),
             order.isCustom ? _CustomSpecCard(order: order) : _StandardSpecCard(order: order),
-            _SizeCard(order: order),
             _DesignCard(order: order),
+            _SizeCard(order: order),
             if (order.isShipped) _ShippingCard(order: order),
             _DocsCard(order: order),
             if (order.statusHistory.isNotEmpty) _HistoryCard(order: order),
@@ -183,6 +183,32 @@ class _CustomHeader extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Kode Pesanan', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
               Text('#${order.orderNumber}', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1.15)),
+              if (order.eventDateRange != null && order.eventDateRange!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.beigeSoft,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.goldLight, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.date_range_rounded, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          'Rentang Acara: ${order.eventDateRange!}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ]),
           ),
           const SizedBox(width: 8),
@@ -524,7 +550,7 @@ class _SizeCard extends StatelessWidget {
     return VgCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         VgCardTitle(
-          title: order.isCustom ? 'Data Ukuran Siswa' : 'Data Ukuran Siswa',
+          title: 'Data Ukuran',
           subtitle: 'Rekapitulasi Ukuran per Stel',
           trailing: sizes.isEmpty
               ? const VgPill(label: 'Belum Ada', color: AppColors.warning, background: AppColors.warningBg, icon: Icons.info_outline)
@@ -612,7 +638,7 @@ class _SizeCard extends StatelessWidget {
           const VgInset(child: Text('Pelanggan belum melampirkan ukuran pada pesanan ini.', style: TextStyle(fontSize: 12.5, color: AppColors.primary))),
           const SizedBox(height: 10),
           VgButton(
-            label: 'Upload Data Ukuran Siswa',
+            label: 'Upload Data Ukuran',
             icon: Icons.upload_file_rounded,
             expanded: true,
             height: 44,
@@ -668,7 +694,7 @@ class _SizeCard extends StatelessWidget {
                         ]),
                         const SizedBox(height: 3),
                         Text(
-                          order.customerFileName ?? 'Berkas Ukuran Siswa',
+                          order.customerFileName ?? 'Berkas Data Ukuran',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
@@ -693,7 +719,7 @@ class _SizeCard extends StatelessWidget {
                 const SizedBox(height: 10),
               ],
               VgButton(
-                label: 'Kelola Data Ukuran Siswa',
+                label: 'Kelola Data Ukuran',
                 icon: Icons.manage_accounts_outlined,
                 style: (order.hasStudentSizes || order.hasCustomerFile || sizes.isNotEmpty) ? VgButtonStyle.outline : VgButtonStyle.maroon,
                 expanded: true,
@@ -738,23 +764,115 @@ class _DesignCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final images = <(String, String)>[];
-    final ref = order.customOrderDetail?.designReference;
-    if (ref != null && ref.startsWith('http')) images.add((ref, 'Referensi Pelanggan'));
-    for (final item in order.items) {
-      if (item.imageUrl != null && images.every((e) => e.$1 != item.imageUrl)) images.add((item.imageUrl!, item.name));
+    String? cloudLink;
+
+    // 1. Ambil foto referensi dari orderPhotos (category = 'referensi')
+    for (final p in order.photosIn('referensi')) {
+      if (p.imageUrl.isNotEmpty) {
+        images.add((p.imageUrl, p.title ?? 'Referensi Pelanggan'));
+      }
     }
+
+    // 2. Ambil dari customOrderDetail?.designReference
+    final ref = order.customOrderDetail?.designReference;
+    if (ref != null && ref.trim().isNotEmpty) {
+      final lower = ref.toLowerCase();
+      final isDriveOrCloud = ref.contains('drive.google.com') ||
+          ref.contains('dropbox.com') ||
+          ref.contains('onedrive') ||
+          ref.contains('icloud') ||
+          (!lower.endsWith('.jpg') &&
+              !lower.endsWith('.jpeg') &&
+              !lower.endsWith('.png') &&
+              !lower.endsWith('.webp') &&
+              !lower.contains('/uploads/'));
+
+      if (isDriveOrCloud && ref.startsWith('http')) {
+        cloudLink = ref;
+      } else {
+        if (images.every((e) => e.$1 != ref)) {
+          images.add((ref, 'Referensi Pelanggan'));
+        }
+      }
+    }
+
+    // 3. Tambahkan foto item pesanan jika ada
+    for (final item in order.items) {
+      if (item.imageUrl != null && images.every((e) => e.$1 != item.imageUrl)) {
+        images.add((item.imageUrl!, item.name));
+      }
+    }
+
     final note = order.customOrderDetail?.designDescription;
-    if (images.isEmpty && note == null) return const SizedBox.shrink();
+    if (images.isEmpty && note == null && cloudLink == null) return const SizedBox.shrink();
 
     return VgCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         VgCardTitle(
           title: order.isCustom ? 'Lampiran Referensi Desain' : 'Referensi Desain & Mockup',
-          subtitle: order.isCustom ? 'Mockup Visual Pakaian Pesanan' : 'Spesifikasi Warna & Aksesoris',
+          subtitle: order.isCustom ? 'Mockup & Foto Referensi Pelanggan' : 'Spesifikasi Warna & Aksesoris',
           trailing: order.isCustom
               ? VgPill(label: '${images.length} Foto', color: AppColors.primary, background: AppColors.beige)
               : const VgIconBadge(icon: Icons.palette_outlined, color: AppColors.goldDark, background: AppColors.warningBg, size: 38, circle: true),
         ),
+        if (cloudLink != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.beigeSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.cloud_outlined, color: AppColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Tautan Cloud / Drive Pelanggan', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                          Text('Pelanggan melampirkan berkas via cloud storage', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  cloudLink,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.primary, fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 8),
+                VgButton(
+                  label: 'Salin Tautan Referensi',
+                  icon: Icons.copy_rounded,
+                  style: VgButtonStyle.outline,
+                  height: 36,
+                  expanded: true,
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: cloudLink!));
+                    VgAlert.info(context: context, message: 'Tautan referensi disalin ke clipboard.');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
         if (images.isNotEmpty)
           GridView.count(
             crossAxisCount: 2,

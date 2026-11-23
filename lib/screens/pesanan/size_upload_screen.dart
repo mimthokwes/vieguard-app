@@ -295,7 +295,7 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     final ok = await provider.saveSizeEntries(widget.orderId, _entries!);
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(ok ? '${_entries!.length} data ukuran siswa tersimpan.' : provider.errorMessage ?? 'Gagal menyimpan data ukuran.')));
+    messenger.showSnackBar(SnackBar(content: Text(ok ? '${_entries!.length} data ukuran tersimpan.' : provider.errorMessage ?? 'Gagal menyimpan data ukuran.')));
     if (ok) navigator.pop();
   }
 
@@ -306,7 +306,7 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
     if (order == null || entries == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        appBar: const VgBackBar(title: 'Data Ukuran Siswa'),
+        appBar: const VgBackBar(title: 'Data Ukuran'),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: const [
@@ -331,7 +331,7 @@ class _SizeUploadScreenState extends State<SizeUploadScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const VgBackBar(title: 'Data Ukuran Siswa'),
+      appBar: const VgBackBar(title: 'Data Ukuran'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [

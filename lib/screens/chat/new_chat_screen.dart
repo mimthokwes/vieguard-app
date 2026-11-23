@@ -56,7 +56,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final ref = o != null ? ' untuk pesanan #${o.orderNumber}' : '';
     return switch (key) {
       'kembali' => 'Selamat siang, kami dari VIEGUARD mengingatkan jadwal pengembalian kostum$ref. Mohon dikembalikan tepat waktu, terima kasih.',
-      'ukuran' => 'Selamat siang, mohon kirimkan data ukuran siswa$ref (nama, tinggi badan, ukuran) agar produksi bisa segera dijadwalkan.',
+      'ukuran' => 'Selamat siang, mohon kirimkan data ukuran$ref (nama, tinggi badan, ukuran) agar produksi bisa segera dijadwalkan.',
       'bayar' => 'Selamat siang, berikut kami informasikan tagihan$ref. Mohon unggah bukti transfer setelah pembayaran, terima kasih.',
       _ => 'Selamat siang ${c.name}, kami dari admin VIEGUARD. Ada yang bisa kami bantu?',
     };

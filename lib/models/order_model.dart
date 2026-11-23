@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../core/utils/formatters.dart';
 import '../core/utils/parsing.dart';
 import 'custom_order_detail_model.dart';
 import 'customer_model.dart';
@@ -110,6 +111,28 @@ class Order {
       if (lower.endsWith('.xlsx') || lower.endsWith('.csv') || lower.endsWith('.xls') || lower.endsWith('.pdf')) {
         return ref.split('/').last;
       }
+    }
+    return null;
+  }
+
+  String? get eventDateRange {
+    final note = customOrderDetail?.consultationNote;
+    if (note != null && note.isNotEmpty) {
+      final match = RegExp(r'(?:Target Acara|Rentang Tanggal|Tanggal Acara|Rentang Waktu):\s*([^\r\n]+)', caseSensitive: false).firstMatch(note);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    if (notes != null && notes!.isNotEmpty) {
+      final match = RegExp(r'(?:Target Acara|Rentang Tanggal|Tanggal Acara|Rentang Waktu):\s*([^\r\n—]+)', caseSensitive: false).firstMatch(notes!);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    if (deadlineDate != null) {
+      return Formatters.date(deadlineDate!);
     }
     return null;
   }
