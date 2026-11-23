@@ -165,7 +165,7 @@ class _PaymentVerificationDetailScreenState extends State<PaymentVerificationDet
               if (order != null) ...[
                 const SizedBox(height: 4),
                 Row(children: [
-                  const Icon(Icons.checkroom_rounded, size: 15, color: AppColors.primary),
+                  const Icon(Icons.apparel_rounded, size: 15, color: AppColors.primary),
                   const SizedBox(width: 5),
                   Expanded(child: Text('${order.headline} (${order.totalQuantity} Stel)', style: const TextStyle(fontSize: 13, color: AppColors.primary))),
                 ]),

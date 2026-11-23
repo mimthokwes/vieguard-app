@@ -136,11 +136,13 @@ class LocalNotificationService {
     required String message,
     String? orderId,
   }) async {
-    final id = (DateTime.now().millisecondsSinceEpoch ~/ 1000) & 0x7FFFFFFF;
+    final id = orderId != null && orderId.isNotEmpty
+        ? (orderId.hashCode & 0x7FFFFFFF)
+        : 1001;
     debugPrint('[LocalNotificationService] Push Notifikasi Pesanan -> $title: $message');
     await show(
       id: id,
-      title: '🛒 $title',
+      title: title,
       body: message,
       payload: orderId != null ? 'order:$orderId' : 'orders',
       channelId: channelOrdersId,
@@ -154,11 +156,13 @@ class LocalNotificationService {
     required String messageText,
     String? conversationId,
   }) async {
-    final id = (DateTime.now().millisecondsSinceEpoch ~/ 1000) & 0x7FFFFFFF;
+    final id = conversationId != null && conversationId.isNotEmpty
+        ? (conversationId.hashCode & 0x7FFFFFFF)
+        : 2001;
     debugPrint('[LocalNotificationService] Push Notifikasi Chat -> $customerName: $messageText');
     await show(
       id: id,
-      title: '💬 Pesan dari $customerName',
+      title: 'Pesan dari $customerName',
       body: messageText,
       payload: conversationId != null ? 'chat:$conversationId' : 'chat',
       channelId: channelChatId,

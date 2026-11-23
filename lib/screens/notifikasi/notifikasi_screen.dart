@@ -134,7 +134,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
           key: 'n${n.id}',
           time: n.createdAt,
           cat: _Cat.pesanan,
-          icon: order?.isCustom == true ? Icons.checkroom_rounded : Icons.receipt_long_outlined,
+          icon: order?.isCustom == true ? Icons.apparel_rounded : Icons.receipt_long_outlined,
           title: n.title,
           body: n.message,
           unread: !n.isRead,

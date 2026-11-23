@@ -139,6 +139,66 @@ class Order {
 
   bool get hasCustomerFile => customerFileName != null;
 
+  String? get customInstitution {
+    final note = customOrderDetail?.consultationNote;
+    if (note != null && note.isNotEmpty) {
+      final match = RegExp(r'(?:Instansi|Sekolah|Pemesan):\s*([^\r\n]+)', caseSensitive: false).firstMatch(note);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    return customer.name;
+  }
+
+  String? get customMaterial {
+    final note = customOrderDetail?.consultationNote;
+    if (note != null && note.isNotEmpty) {
+      final match = RegExp(r'(?:Bahan|Preferensi Bahan):\s*([^\r\n]+)', caseSensitive: false).firstMatch(note);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    final desc = customOrderDetail?.designDescription;
+    if (desc != null && desc.isNotEmpty) {
+      final match = RegExp(r'Preferensi Bahan:\s*([^\r\n]+)', caseSensitive: false).firstMatch(desc);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    return null;
+  }
+
+  String? get customAccessories {
+    final note = customOrderDetail?.consultationNote;
+    if (note != null && note.isNotEmpty) {
+      final match = RegExp(r'Aksesoris:\s*([^\r\n]+)', caseSensitive: false).firstMatch(note);
+      if (match != null) {
+        final val = match.group(1)?.trim();
+        if (val != null && val.isNotEmpty) return val;
+      }
+    }
+    return null;
+  }
+
+  String? get cleanDesignDescription {
+    final desc = customOrderDetail?.designDescription;
+    if (desc == null || desc.isEmpty) return null;
+    const marker = 'Deskripsi Desain & Model:';
+    if (desc.contains(marker)) {
+      final parts = desc.split(marker);
+      if (parts.length > 1) {
+        final cleaned = parts[1].trim();
+        if (cleaned.isNotEmpty) return cleaned;
+      }
+    }
+    return desc.trim();
+  }
+
+  List<OrderPhoto> get adminDocsPhotos => photos.where((p) => p.category != 'referensi').toList();
+
   bool get isCustomerFilePdf {
     final fn = (customerFileName ?? '').toLowerCase();
     return fn.endsWith('.pdf') || (notes?.toLowerCase().contains('(pdf)') ?? false);

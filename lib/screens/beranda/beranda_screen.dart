@@ -183,10 +183,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     ...schedule.map((o) => _JadwalTile(order: o, today: today)),
                   const SizedBox(height: 16),
                   VgSectionHeader(
-                    title: 'Pesanan Terbaru',
+                    title: 'Pesanan Bulan Ini',
                     badge: orders.perluTindakanCount > 0
                         ? VgPill(label: '${orders.perluTindakanCount} Perlu Tindakan', color: AppColors.warning, background: AppColors.warningBg, fontSize: 10.5)
-                        : null,
+                        : (orders.pesananTerbaru.isNotEmpty
+                            ? VgPill(label: '${orders.pesananTerbaru.length} Pesanan', color: AppColors.primary, background: AppColors.beige, fontSize: 10.5)
+                            : null),
                     actionLabel: 'Semua',
                     onAction: () => _push(const PesananListScreen()),
                   ),
@@ -244,9 +246,9 @@ class _WelcomeBanner extends StatelessWidget {
               ]),
             ),
             const SizedBox(height: 12),
-            Text('Selamat Datang, $adminName', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.goldLight, height: 1.25)),
+            Text('Ruang Kelola, $adminName', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.goldLight, height: 1.25)),
             const SizedBox(height: 6),
-            const Text('Pantau pesanan pembelian & rental kostum hari ini.', style: TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted, height: 1.4)),
+            const Text('Kelola pesanan jahit, stok barang, dan jadwal sewa hari ini.', style: TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted, height: 1.4)),
           ]),
         ),
     );
@@ -493,13 +495,25 @@ class _RecentOrderCard extends StatelessWidget {
         ]),
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          VgThumb(url: order.coverImage, size: 64, radius: 10),
+          VgThumb(
+            url: order.coverImage,
+            size: 64,
+            radius: 10,
+            placeholderIcon: Icons.apparel_rounded,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
                 Text(order.customer.name, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.primary)),
-                VgPill(label: order.orderType.label, color: AppColors.info, background: AppColors.infoBg, fontSize: 10, padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3)),
+                VgPill(
+                  label: order.isCustom ? 'Custom Pesanan' : order.orderType.label,
+                  icon: order.isCustom ? Icons.apparel_rounded : null,
+                  color: order.isCustom ? AppColors.primary : AppColors.info,
+                  background: order.isCustom ? AppColors.beige : AppColors.infoBg,
+                  fontSize: 10,
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                ),
               ]),
               const SizedBox(height: 4),
               Text('${order.headline} (${order.totalQuantity} Stel)', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),

@@ -20,6 +20,7 @@ import 'ship_order_screen.dart';
 import 'size_file_helper.dart';
 import 'size_preview_screen.dart';
 import 'size_upload_screen.dart';
+import 'widgets/custom_order_spec_card.dart';
 import 'workshop_progress_screen.dart';
 
 class DetailPesananScreen extends StatefulWidget {
@@ -76,7 +77,7 @@ class _DetailPesananScreenState extends State<DetailPesananScreen> {
           children: [
             order.isCustom ? _CustomHeader(order: order) : _StandardHeader(order: order),
             _CustomerCard(order: order, custom: order.isCustom),
-            order.isCustom ? _CustomSpecCard(order: order) : _StandardSpecCard(order: order),
+            order.isCustom ? CustomOrderSpecCard(order: order) : _StandardSpecCard(order: order),
             _DesignCard(order: order),
             _SizeCard(order: order),
             if (order.isShipped) _ShippingCard(order: order),
@@ -182,7 +183,14 @@ class _CustomHeader extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Kode Pesanan', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
-              Text('#${order.orderNumber}', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1.15)),
+              const SizedBox(height: 2),
+              Text(
+                '#${order.orderNumber}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1.2),
+              ),
               if (order.eventDateRange != null && order.eventDateRange!.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Container(
@@ -195,11 +203,11 @@ class _CustomHeader extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.date_range_rounded, size: 14, color: AppColors.primary),
+                      const Icon(Icons.event_available_rounded, size: 14, color: AppColors.primary),
                       const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          'Rentang Acara: ${order.eventDateRange!}',
+                          'Tanggal Dibutuhkan: ${order.eventDateRange!}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary),
@@ -213,10 +221,10 @@ class _CustomHeader extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           VgInset(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             radius: 8,
             width: null,
-            child: Text('Custom Batch\n${order.totalQuantity} Stel', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+            child: const Text('Custom Pesanan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
           ),
         ]),
         const SizedBox(height: 12),
@@ -230,7 +238,9 @@ class _CustomHeader extends StatelessWidget {
               child: Text.rich(TextSpan(children: [
                 const TextSpan(text: 'Target Selesai: ', style: TextStyle(color: AppColors.textSecondary)),
                 TextSpan(
-                  text: order.deadlineDate != null ? Formatters.date(order.deadlineDate!) : 'Belum ditentukan',
+                  text: order.deadlineDate != null
+                      ? Formatters.date(order.deadlineDate!)
+                      : (order.eventDateRange ?? 'Belum ditentukan'),
                   style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                 ),
               ]), style: const TextStyle(fontSize: 12.5)),
@@ -473,67 +483,6 @@ class _PriceLine extends StatelessWidget {
         Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.primary))),
         const SizedBox(width: 10),
         Text(value, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
-      ]),
-    );
-  }
-}
-
-class _SpecBlock extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? trailingNote;
-  const _SpecBlock({required this.label, required this.value, this.trailingNote});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: VgInset(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.primary)),
-          const SizedBox(height: 3),
-          Text.rich(TextSpan(children: [
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            if (trailingNote != null) TextSpan(text: ' $trailingNote', style: const TextStyle(color: AppColors.primary, fontSize: 12.5)),
-          ]), style: const TextStyle(fontSize: 13.5, height: 1.4)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _CustomSpecCard extends StatelessWidget {
-  final Order order;
-  const _CustomSpecCard({required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    final d = order.customOrderDetail;
-    final names = order.items.map((i) => i.name).toSet().join(' + ');
-    return VgCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const VgCardTitle(
-          title: 'Spesifikasi Permintaan',
-          subtitle: 'Detail Konfigurasi Pakaian',
-          trailing: VgIconBadge(icon: Icons.handyman_outlined, color: Colors.white, background: AppColors.primary, size: 34),
-        ),
-        _SpecBlock(label: 'Kategori & Tipe Produk', value: d?.jenisJenjang ?? order.headline),
-        if (d?.designDescription != null) _SpecBlock(label: 'Deskripsi Desain & Bahan', value: d!.designDescription!),
-        _SpecBlock(label: 'Total Kuantitas', value: '${order.totalQuantity} Stel', trailingNote: names.isEmpty ? null : '($names)'),
-        if (d?.consultationNote != null) _SpecBlock(label: 'Catatan Konsultasi', value: d!.consultationNote!),
-        if (order.notes != null && order.notes!.isNotEmpty)
-          VgInset(
-            color: AppColors.beigeSoft,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
-                Icon(Icons.sticky_note_2_outlined, size: 16, color: AppColors.primary),
-                SizedBox(width: 6),
-                Text('Catatan Khusus Pelanggan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-              ]),
-              const SizedBox(height: 4),
-              Text('"${order.notes!}"', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: AppColors.textPrimary, height: 1.4)),
-            ]),
-          ),
       ]),
     );
   }
@@ -1142,7 +1091,7 @@ class _DocsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final photos = order.photos;
+    final photos = order.adminDocsPhotos;
     void open() => Navigator.push(context, MaterialPageRoute(builder: (_) => PhotoDocsScreen(orderId: order.id)));
     return VgCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

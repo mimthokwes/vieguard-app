@@ -494,11 +494,22 @@ class VgThumb extends StatelessWidget {
   final String? url;
   final double size;
   final double radius;
-  const VgThumb({super.key, this.url, this.size = 64, this.radius = 12});
+  final IconData placeholderIcon;
+  const VgThumb({
+    super.key,
+    this.url,
+    this.size = 64,
+    this.radius = 12,
+    this.placeholderIcon = Icons.apparel_rounded,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = Container(color: AppColors.beige, alignment: Alignment.center, child: Icon(Icons.checkroom_rounded, color: AppColors.primary, size: size * 0.45));
+    final placeholder = Container(
+      color: AppColors.beige,
+      alignment: Alignment.center,
+      child: Icon(placeholderIcon, color: AppColors.primary, size: size * 0.45),
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(

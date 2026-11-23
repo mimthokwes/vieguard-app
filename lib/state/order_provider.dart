@@ -92,10 +92,19 @@ class OrderProvider extends ChangeNotifier {
     return total / produksi.length;
   }
 
-  List<Order> get pesananTerbaru {
+  List<Order> get pesananBulanIni {
+    final now = DateTime.now();
+    final inThisMonth = _orders.where((o) =>
+        o.createdAt.year == now.year && o.createdAt.month == now.month).toList();
+    inThisMonth.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (inThisMonth.isNotEmpty) {
+      return inThisMonth;
+    }
     final sorted = [..._orders]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return sorted.take(3).toList();
+    return sorted;
   }
+
+  List<Order> get pesananTerbaru => pesananBulanIni;
 
   List<Order> filtered({OrderStatus? status, OrderType? orderType, String query = ''}) {
     return _orders.where((o) {

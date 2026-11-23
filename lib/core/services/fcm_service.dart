@@ -73,8 +73,15 @@ class FcmService {
             payload = 'chat:${data['conversationId']}';
           }
 
+          int notifId = 1001;
+          if (data['orderId'] != null && data['orderId'].toString().isNotEmpty) {
+            notifId = data['orderId'].toString().hashCode & 0x7FFFFFFF;
+          } else if (data['conversationId'] != null && data['conversationId'].toString().isNotEmpty) {
+            notifId = data['conversationId'].toString().hashCode & 0x7FFFFFFF;
+          }
+
           LocalNotificationService.show(
-            id: (DateTime.now().millisecondsSinceEpoch ~/ 1000) & 0x7FFFFFFF,
+            id: notifId,
             title: notif.title ?? 'VIEGUARD',
             body: notif.body ?? '',
             payload: payload,
