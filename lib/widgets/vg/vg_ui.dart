@@ -500,7 +500,7 @@ class VgThumb extends StatelessWidget {
     this.url,
     this.size = 64,
     this.radius = 12,
-    this.placeholderIcon = Icons.apparel_rounded,
+    this.placeholderIcon = Icons.dry_cleaning_rounded,
   });
 
   @override

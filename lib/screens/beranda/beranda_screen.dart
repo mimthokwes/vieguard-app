@@ -499,7 +499,7 @@ class _RecentOrderCard extends StatelessWidget {
             url: order.coverImage,
             size: 64,
             radius: 10,
-            placeholderIcon: Icons.apparel_rounded,
+            placeholderIcon: Icons.dry_cleaning_rounded,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -508,7 +508,7 @@ class _RecentOrderCard extends StatelessWidget {
                 Text(order.customer.name, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.primary)),
                 VgPill(
                   label: order.isCustom ? 'Custom Pesanan' : order.orderType.label,
-                  icon: order.isCustom ? Icons.apparel_rounded : null,
+                  icon: order.isCustom ? Icons.dry_cleaning_rounded : null,
                   color: order.isCustom ? AppColors.primary : AppColors.info,
                   background: order.isCustom ? AppColors.beige : AppColors.infoBg,
                   fontSize: 10,
