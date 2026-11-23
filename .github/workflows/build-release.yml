@@ -183,7 +183,7 @@ jobs:
 
       - name: Kompilasi iOS (Release Unsigned)
         run: |
-          flutter build ios --release --no-codesign --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}" -- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="A1B2C3D4E5" CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          flutter build ios --release --no-codesign --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.BUILD_NUM }}"
 
       - name: Kemas Menjadi Berkas IPA
         run: |

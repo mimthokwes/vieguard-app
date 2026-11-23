@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../models/order_model.dart';
 import '../../../widgets/vg/vg_ui.dart';
 
